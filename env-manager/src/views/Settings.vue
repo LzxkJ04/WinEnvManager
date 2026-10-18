@@ -705,9 +705,247 @@
       </div>
     </a-modal>
 
+    <!-- ==================== 注册表设置（追加） ==================== -->
+    <div class="wem-card">
+      <div class="wem-card-head"><div class="wem-card-title"><SafetyCertificateOutlined /> 注册表设置</div></div>
+      <div class="wem-card-body">
+        <div class="row">
+          <span class="row-label">打开注册表页面时自动预加载环境变量节点</span>
+          <a-switch :checked="cfg.regPreloadOnOpen !== false" @change="(v) => save({ regPreloadOnOpen: v })" />
+          <span class="text-muted">进入页面即展开 HKCU\Environment 与系统环境变量分支，省一次点击</span>
+        </div>
+        <div class="row">
+          <span class="row-label">注册表备份默认存储目录</span>
+          <a-input
+            :value="cfg.regBackupDir"
+            size="small"
+            class="mono"
+            style="width: 340px"
+            placeholder="留空使用数据目录下的 registryBackup"
+            @change="(e) => save({ regBackupDir: e.target.value })"
+          />
+          <a-button size="small" @click="chooseRegBackupDir">浏览…</a-button>
+          <span class="text-muted">分支备份、批量替换备份与健康修复备份都会写到这里</span>
+        </div>
+        <div class="row">
+          <span class="row-label">注册表备份最大保留数量</span>
+          <a-input-number
+            :value="cfg.regBackupKeep || 30"
+            size="small"
+            :min="1"
+            :max="500"
+            @change="(v) => save({ regBackupKeep: v })"
+          />
+          <span class="text-muted">份，超出后自动清理最早的备份；受保护备份不清理</span>
+        </div>
+        <div class="row">
+          <span class="row-label">导入 reg 默认模式</span>
+          <a-radio-group
+            :value="cfg.regImportMode || 'merge'"
+            size="small"
+            button-style="solid"
+            @change="(e) => save({ regImportMode: e.target.value })"
+          >
+            <a-radio-button value="merge">合并（覆盖同名值）</a-radio-button>
+            <a-radio-button value="append">仅新增（跳过同名值）</a-radio-button>
+          </a-radio-group>
+          <span class="text-muted">导入向导里仍可临时改成本次策略</span>
+        </div>
+        <div class="row">
+          <span class="row-label">注册表树异步加载</span>
+          <a-switch :checked="cfg.regTreeLazy !== false" @change="(v) => save({ regTreeLazy: v })" />
+          <span class="text-muted">建议保持开启；关闭后一次性递归读取，大分支可能明显卡顿</span>
+        </div>
+        <div class="row">
+          <span class="row-label">修改前自动创建保底备份</span>
+          <a-switch :checked="cfg.regAutoBackupBeforeWrite !== false" @change="(v) => save({ regAutoBackupBeforeWrite: v })" />
+          <span class="text-muted">每次写键值、删键、导入前先备份所在分支，失败可回滚</span>
+        </div>
+        <div class="row">
+          <span class="row-label">搜索是否检索二进制数据</span>
+          <a-switch :checked="!!cfg.regSearchBinary" @change="(v) => save({ regSearchBinary: v })" />
+          <span class="text-muted">默认关闭；开启后会把 REG_BINARY 转成十六进制参与匹配，性能消耗较大</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==================== 定时任务设置（追加） ==================== -->
+    <div class="wem-card">
+      <div class="wem-card-head"><div class="wem-card-title"><AppstoreOutlined /> 定时任务设置</div></div>
+      <div class="wem-card-body">
+        <div class="row">
+          <span class="row-label">任务失败桌面通知</span>
+          <a-switch :checked="cfg.scheduleNotifyOnFail !== false" @change="(v) => save({ scheduleNotifyOnFail: v })" />
+          <span class="text-muted">无人值守执行失败时弹出系统通知，便于及时发现</span>
+        </div>
+        <div class="row">
+          <span class="row-label">任务日志最大保留条数</span>
+          <a-input-number
+            :value="cfg.scheduleLogKeep || 200"
+            size="small"
+            :min="20"
+            :max="5000"
+            @change="(v) => save({ scheduleLogKeep: v })"
+          />
+          <span class="text-muted">条，超出后清理最早的执行记录</span>
+        </div>
+        <div class="row">
+          <span class="row-label">静默执行说明</span>
+          <span class="text-muted">
+            仅备份类只读操作可静默执行（系统环境快照、注册表分支备份、审计日志导出、环境健康诊断）；
+            <b style="color: var(--wem-warning)">修改类操作禁止定时执行</b>，后端会直接拒绝创建。
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==================== 配置备份与恢复（追加） ==================== -->
+    <div class="wem-card">
+      <div class="wem-card-head">
+        <div class="wem-card-title"><CloudUploadOutlined /> 配置备份与恢复</div>
+        <div class="toolbar">
+          <a-button size="small" @click="openPackExport">导出完整配置包</a-button>
+          <a-button size="small" @click="openPackImport">导入配置包</a-button>
+        </div>
+      </div>
+      <div class="wem-card-body">
+        <div class="hint-box">
+          <InfoCircleOutlined />
+          <div>
+            配置包（<span class="mono">.wemcfg</span>）把程序设置、表格视图预设、识别规则、配置集、项目环境与注册表收藏夹打成一个文件，
+            用于换机迁移或团队共享。可加密码加密；导入前会自动备份当前全部配置，导入完成后建议重启软件生效。
+          </div>
+        </div>
+      </div>
+    </div>
+
     <TableViewSettings />
     <PopupSettings />
     <ExtraProductSettings />
+
+    <!-- 导出配置包 -->
+    <a-modal
+      v-model:open="packExportOpen"
+      title="导出完整配置包"
+      width="720px"
+      ok-text="导出"
+      cancel-text="取消"
+      :confirm-loading="packExporting"
+      @ok="doPackExport"
+    >
+      <div class="hint-box" style="margin-bottom: 10px">
+        <InfoCircleOutlined />
+        <div>勾选要打包的模块。没有数据的模块会自动跳过并在清单里标注原因。</div>
+      </div>
+      <div class="section-title">打包模块</div>
+      <a-checkbox-group v-model:value="packModules" class="pack-modules">
+        <a-checkbox v-for="m in packModuleOptions" :key="m.key" :value="m.key">{{ m.name }}</a-checkbox>
+      </a-checkbox-group>
+      <a-form layout="vertical" style="margin-top: 12px">
+        <a-row :gutter="12">
+          <a-col :span="12">
+            <a-form-item label="备注">
+              <a-input v-model:value="packForm.note" size="small" placeholder="例如：换机迁移 / 团队标准配置" :maxlength="120" />
+            </a-form-item>
+          </a-col>
+          <a-col :span="12">
+            <a-form-item label="标签（逗号分隔）">
+              <a-input v-model:value="packForm.tagsText" size="small" placeholder="例如：开发,JDK17" />
+            </a-form-item>
+          </a-col>
+        </a-row>
+        <a-form-item label="加密密码（可选）">
+          <a-input-password v-model:value="packForm.password" size="small" placeholder="留空则不加密，任何人可直接查看内容" />
+        </a-form-item>
+      </a-form>
+    </a-modal>
+
+    <!-- 导入配置包 -->
+    <a-modal
+      v-model:open="packImportOpen"
+      title="导入配置包"
+      width="780px"
+      ok-text="开始导入"
+      cancel-text="取消"
+      :ok-button-props="{ disabled: !packImportFile || !packImportPicked.length }"
+      :confirm-loading="packImporting"
+      @ok="doPackImport"
+    >
+      <div class="row" style="padding-top: 0">
+        <span class="row-label">配置包文件</span>
+        <a-input :value="packImportFile" size="small" class="mono" readonly placeholder="尚未选择文件" style="width: 380px" />
+        <a-button size="small" @click="pickPackFile">选择文件…</a-button>
+      </div>
+      <div class="row">
+        <span class="row-label">配置包密码</span>
+        <a-input-password
+          v-model:value="packImportPassword"
+          size="small"
+          style="width: 240px"
+          placeholder="未加密的包留空"
+          @press-enter="inspectPack"
+        />
+        <a-button size="small" :disabled="!packImportFile" @click="inspectPack">重新解析</a-button>
+        <span class="text-muted">加密包必须输入正确密码才能读取清单</span>
+      </div>
+
+      <div v-if="packImportError" class="hint-box warn" style="margin-top: 10px">
+        <ExclamationCircleOutlined />
+        <div>{{ packImportError }}</div>
+      </div>
+
+      <template v-if="packManifest">
+        <div class="kv-list" style="margin-top: 10px">
+          <span class="kv-key">包版本</span><span class="kv-val">{{ packManifest.appVersion || '—' }}</span>
+          <span class="kv-key">创建时间</span><span class="kv-val">{{ packManifest.createdAt || '—' }}</span>
+          <span class="kv-key">备注</span><span class="kv-val">{{ packManifest.note || '—' }}</span>
+          <span class="kv-key">标签</span>
+          <span class="kv-val">
+            <a-tag v-for="t in packManifest.tags || []" :key="t" color="blue">{{ t }}</a-tag>
+            <span v-if="!(packManifest.tags || []).length">—</span>
+          </span>
+          <span class="kv-key">加密</span><span class="kv-val">{{ packEncrypted ? '已加密（AES-256-GCM）' : '未加密' }}</span>
+        </div>
+
+        <div v-if="packVersionWarning" class="hint-box warn" style="margin-top: 10px">
+          <ExclamationCircleOutlined />
+          <div>{{ packVersionWarning }}</div>
+        </div>
+
+        <div class="section-title">模块清单（勾选要导入的模块）</div>
+        <div class="pack-list">
+          <div v-for="m in packManifest.modules || []" :key="m.key" class="pack-item" :class="{ off: m.available === false }">
+            <a-checkbox
+              :checked="packImportPicked.includes(m.key)"
+              :disabled="m.available === false"
+              @change="(e) => togglePackModule(m.key, e.target.checked)"
+            />
+            <span class="pack-name">{{ m.name }}</span>
+            <span class="text-muted pack-meta">
+              <template v-if="m.available === false">{{ m.reason || '配置包中无此模块' }}</template>
+              <template v-else>{{ m.count }} 项</template>
+            </span>
+          </div>
+        </div>
+
+        <div class="row" style="margin-top: 10px">
+          <span class="row-label">冲突策略</span>
+          <a-radio-group v-model:value="packImportMode" size="small" button-style="solid">
+            <a-radio-button value="overwrite">覆盖</a-radio-button>
+            <a-radio-button value="merge">合并</a-radio-button>
+            <a-radio-button value="selected">仅选中模块</a-radio-button>
+          </a-radio-group>
+          <span class="text-muted">
+            {{ packImportMode === 'overwrite' ? '用包内数据整体替换本地同名模块' : packImportMode === 'merge' ? '按 ID 合并，包内同 ID 覆盖本地' : '只导入勾选的模块，并按 ID 合并' }}
+          </span>
+        </div>
+
+        <div class="hint-box warn" style="margin-top: 10px">
+          <ExclamationCircleOutlined />
+          <div>导入前会自动备份当前全部配置到数据目录的 configPack 下。导入完成后建议重启软件使设置全部生效。</div>
+        </div>
+      </template>
+    </a-modal>
   </div>
 </template>
 
@@ -936,6 +1174,182 @@ async function chooseDevRoot() {
 async function chooseBackupDir() {
   const picked = await api.fs.selectFolder({ title: '选择备份存储目录', defaultPath: paths.backupDir })
   if (picked.ok && !picked.data.canceled) await save({ backupDir: picked.data.path })
+}
+
+async function chooseRegBackupDir() {
+  const picked = await api.fs.selectFolder({ title: '选择注册表备份目录', defaultPath: cfg.regBackupDir })
+  if (!picked.ok) {
+    message.error(picked.message)
+    return
+  }
+  if (picked.data && !picked.data.canceled) await save({ regBackupDir: picked.data.path })
+}
+
+/* ---------------------- 配置备份与恢复 ---------------------- */
+
+const packExportOpen = ref(false)
+const packExporting = ref(false)
+const packModules = ref([])
+const packForm = reactive({ note: '', tagsText: '', password: '' })
+const packModuleOptions = [
+  { key: 'config', name: '程序设置' },
+  { key: 'tableLayout', name: '表格视图预设与条件格式' },
+  { key: 'scanRules', name: '软件识别规则库' },
+  { key: 'envsets', name: '配置集与互斥组' },
+  { key: 'projects', name: '项目环境与模板' },
+  { key: 'registryFavorites', name: '注册表收藏夹' }
+]
+
+const packImportOpen = ref(false)
+const packImporting = ref(false)
+const packImportFile = ref('')
+const packImportError = ref('')
+const packImportPassword = ref('')
+const packManifest = ref(null)
+const packEncrypted = ref(false)
+const packVersionWarning = ref('')
+const packImportPicked = ref([])
+const packImportMode = ref('overwrite')
+
+function openPackExport() {
+  packModules.value = packModuleOptions.map((m) => m.key)
+  packForm.note = ''
+  packForm.tagsText = ''
+  packForm.password = ''
+  packExportOpen.value = true
+}
+
+async function doPackExport() {
+  if (!packModules.value.length) {
+    message.warning('请至少选择一个模块')
+    return
+  }
+  packExporting.value = true
+  try {
+    const tags = String(packForm.tagsText || '')
+      .split(/[,，]/)
+      .map((t) => t.trim())
+      .filter(Boolean)
+    const res = await api.configPack.exportPack({
+      modules: packModules.value.slice(),
+      note: packForm.note,
+      tags,
+      password: packForm.password
+    })
+    if (!res.ok) {
+      message.error(res.message)
+      return
+    }
+    if (!res.data || !res.data.file) return
+    message.success(`配置包已导出：${res.data.file}`)
+    packExportOpen.value = false
+  } finally {
+    packExporting.value = false
+  }
+}
+
+function resetPackImport() {
+  packImportFile.value = ''
+  packImportError.value = ''
+  packImportPassword.value = ''
+  packManifest.value = null
+  packEncrypted.value = false
+  packVersionWarning.value = ''
+  packImportPicked.value = []
+  packImportMode.value = 'overwrite'
+}
+
+function openPackImport() {
+  resetPackImport()
+  packImportOpen.value = true
+}
+
+async function pickPackFile() {
+  const picked = await api.configPack.pickOpen()
+  if (!picked.ok) {
+    message.error(picked.message)
+    return
+  }
+  if (!picked.data || !picked.data.file) return
+  packImportFile.value = picked.data.file
+  await inspectPack()
+}
+
+async function inspectPack() {
+  if (!packImportFile.value) {
+    message.warning('请先选择配置包文件')
+    return
+  }
+  packImportError.value = ''
+  packManifest.value = null
+  packVersionWarning.value = ''
+  const res = await api.configPack.inspectPack({
+    file: packImportFile.value,
+    password: packImportPassword.value
+  })
+  if (!res.ok) {
+    packImportError.value = res.message || '配置包解析失败'
+    return
+  }
+  const data = res.data || {}
+  packManifest.value = data.manifest || null
+  packEncrypted.value = !!data.encrypted
+  packVersionWarning.value = data.versionWarning || ''
+  packImportPicked.value = ((data.manifest && data.manifest.modules) || [])
+    .filter((m) => m.available !== false)
+    .map((m) => m.key)
+}
+
+function togglePackModule(key, checked) {
+  if (checked) {
+    if (!packImportPicked.value.includes(key)) packImportPicked.value = [...packImportPicked.value, key]
+  } else {
+    packImportPicked.value = packImportPicked.value.filter((k) => k !== key)
+  }
+}
+
+async function doPackImport() {
+  if (!packImportFile.value) {
+    message.warning('请先选择配置包文件')
+    return
+  }
+  if (!packImportPicked.value.length) {
+    message.warning('请至少选择一个要导入的模块')
+    return
+  }
+  packImporting.value = true
+  try {
+    const res = await api.configPack.importPack({
+      file: packImportFile.value,
+      password: packImportPassword.value,
+      modules: packImportPicked.value.slice(),
+      mode: packImportMode.value
+    })
+    if (!res.ok) {
+      message.error(res.message)
+      return
+    }
+    const data = res.data || {}
+    const done = (data.imported || []).length
+    const skipped = (data.skipped || []).length
+    if (done) {
+      Modal.success({
+        title: '配置导入完成',
+        content:
+          `已导入 ${done} 个模块${skipped ? `，跳过 ${skipped} 个` : ''}。` +
+          `\n导入前已自动备份当前配置：${data.backupFile || '—'}` +
+          '\n\n建议重启软件，使全部设置与配置生效。',
+        okText: '知道了'
+      })
+    } else {
+      message.error('没有任何模块被导入，请检查配置包内容')
+      return
+    }
+    packImportOpen.value = false
+    await load()
+  } finally {
+    packImporting.value = false
+  }
 }
 
 async function openPath(p) {
@@ -1173,5 +1587,53 @@ onMounted(load)
   flex-wrap: wrap;
   gap: 6px;
   align-items: center;
+}
+
+.pack-modules {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 6px 12px;
+}
+
+.pack-list {
+  border: 1px solid var(--wem-border);
+  border-radius: 8px;
+  background: var(--wem-card-alt);
+  padding: 8px 10px;
+  max-height: 220px;
+  overflow: auto;
+}
+
+.pack-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 0;
+  border-bottom: 1px dashed var(--wem-border);
+  font-size: 12.5px;
+}
+
+.pack-item:last-child {
+  border-bottom: none;
+}
+
+.pack-item.off {
+  opacity: 0.66;
+}
+
+.pack-name {
+  flex: 0 0 auto;
+  color: var(--wem-text);
+}
+
+.pack-meta {
+  margin-left: auto;
+  font-size: 12px;
+}
+
+.section-title {
+  font-size: 13px;
+  font-weight: 600;
+  margin: 10px 0 6px;
 }
 </style>

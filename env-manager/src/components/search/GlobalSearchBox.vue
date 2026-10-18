@@ -95,6 +95,8 @@ const groups = [
   { type: 'snaps', label: '快照' },
   { type: 'tools', label: '开发工具' },
   { type: 'rules', label: '识别规则' },
+  { type: 'favs', label: '注册表收藏' },
+  { type: 'scheds', label: '定时任务' },
   { type: 'audits', label: '日志' }
 ]
 

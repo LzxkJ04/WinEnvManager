@@ -165,7 +165,8 @@ import {
   MenuFoldOutlined, MenuUnfoldOutlined, ReloadOutlined, UndoOutlined, RedoOutlined,
   RollbackOutlined, SaveOutlined, WarningOutlined, RocketOutlined, AppstoreOutlined,
   ThunderboltOutlined, AlertOutlined, SearchOutlined, FileSearchOutlined, FolderOpenOutlined,
-  BulbOutlined, BulbFilled, DesktopOutlined
+  BulbOutlined, BulbFilled, DesktopOutlined,
+  ApartmentOutlined, SafetyCertificateOutlined, CalendarOutlined
 } from '@ant-design/icons-vue'
 
 import StatusBar from '@/components/StatusBar.vue'
@@ -189,7 +190,8 @@ const router = useRouter()
 const iconMap = {
   DashboardOutlined, UserOutlined, ClusterOutlined, NodeIndexOutlined, DatabaseOutlined,
   HistoryOutlined, SwapOutlined, ToolOutlined, SettingOutlined, InfoCircleOutlined,
-  RocketOutlined, AppstoreOutlined, SearchOutlined, FileSearchOutlined, FolderOpenOutlined
+  RocketOutlined, AppstoreOutlined, SearchOutlined, FileSearchOutlined, FolderOpenOutlined,
+  ApartmentOutlined, SafetyCertificateOutlined, CalendarOutlined
 }
 
 const menuRoutes = router.getRoutes().filter((r) => r.meta && r.meta.title)
@@ -200,6 +202,10 @@ const META_DESC = {
   '/system': '对所有用户生效，需管理员权限写入',
   '/path': '拆分、排序、去重与有效性校验',
   '/devenv': '环境市场 / 已安装管理 / 任务队列 / 环境审计',
+  '/registry': '可视化浏览注册表，环境变量分支一键定位',
+  '/registry-backup': '注册表分支备份、对比与事务化恢复',
+  '/health': '扫描 PATH、引用、注册表与项目异常，预览式修复',
+  '/schedules': '定时快照、注册表备份与诊断，仅备份类只读任务',
   '/envsets': '多套环境一键切换，支持互斥组与项目独立环境',
   '/projects': '项目变量只注入本次终端，不写注册表',
   '/backup': '导出 / 导入 / 自动备份管理',
@@ -455,6 +461,8 @@ const searchSets = ref([])
 const searchSnaps = ref([])
 const searchTools = ref([])
 const searchAudits = ref([])
+const searchFavs = ref([])
+const searchScheds = ref([])
 
 const searchSources = computed(() => {
   const vars = []
@@ -479,7 +487,9 @@ const searchSources = computed(() => {
     snaps: searchSnaps.value,
     tools: searchTools.value.length ? searchTools.value : scanned,
     rules: Array.isArray(dev.rules) ? dev.rules : [],
-    audits: searchAudits.value
+    audits: searchAudits.value,
+    favs: searchFavs.value,
+    scheds: searchScheds.value
   }
 })
 
@@ -528,6 +538,23 @@ async function loadSearchExtras() {
       searchTools.value = takeApiList(await dev.scan({}), ['items', 'tools', 'list'])
     }
   } catch (_) { /* 失败保持空数组 */ }
+
+  // 注册表收藏夹与定时任务：都是轻量列表，直接接入全局搜索。
+  // 不在全局搜索里扫描整棵注册表，代价过高，账号级检索留在注册表页内做。
+  try {
+    if (api.regFav && typeof api.regFav.list === 'function') {
+      const res = await api.regFav.list()
+      const items = res && res.ok && res.data && Array.isArray(res.data.items) ? res.data.items : []
+      searchFavs.value = items.map((it) => ({ name: it.name, value: it.path, key: it.id }))
+    }
+  } catch (_) { /* 失败保持空数组 */ }
+  try {
+    if (api.schedule && typeof api.schedule.list === 'function') {
+      const res = await api.schedule.list()
+      const list = res && res.ok && res.data && Array.isArray(res.data.tasks) ? res.data.tasks : []
+      searchScheds.value = list.map((it) => ({ name: it.name, value: it.type, key: it.id }))
+    }
+  } catch (_) { /* 失败保持空数组 */ }
 }
 
 function onSearchPick(payload) {
@@ -539,6 +566,8 @@ function onSearchPick(payload) {
   else if (type === 'snaps') path = '/snapshot'
   else if (type === 'tools' || type === 'rules') path = '/devenv'
   else if (type === 'audits') path = '/audit'
+  else if (type === 'favs') path = '/registry'
+  else if (type === 'scheds') path = '/schedules'
   router.push(path)
 }
 

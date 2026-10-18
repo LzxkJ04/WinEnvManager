@@ -25,9 +25,25 @@
             <a-radio-button value="CLI">CLI</a-radio-button>
           </a-radio-group>
           <span class="text-muted" style="margin-left: 10px">动作：</span>
-          <a-select v-model:value="fAction" size="small" style="width: 130px">
+          <a-select v-model:value="fAction" size="small" style="width: 160px">
             <a-select-option value="all">全部动作</a-select-option>
             <a-select-option value="applyChanges">批量写入</a-select-option>
+            <a-select-option value="registryCreateKey">注册表：新建项</a-select-option>
+            <a-select-option value="registryEditValue">注册表：编辑键值</a-select-option>
+            <a-select-option value="registryDeleteValue">注册表：删除键值</a-select-option>
+            <a-select-option value="registryDeleteKey">注册表：删除项</a-select-option>
+            <a-select-option value="registryBackup">注册表：分支备份</a-select-option>
+            <a-select-option value="registryRestore">注册表：备份恢复</a-select-option>
+            <a-select-option value="registryImportReg">注册表：导入 REG</a-select-option>
+            <a-select-option value="registryExportReg">注册表：导出 REG</a-select-option>
+            <a-select-option value="registryCompare">注册表：执行对比</a-select-option>
+            <a-select-option value="registryBatchReplace">注册表：批量替换</a-select-option>
+            <a-select-option value="registryDependency">注册表：依赖分析</a-select-option>
+            <a-select-option value="configPackExport">配置：导出配置包</a-select-option>
+            <a-select-option value="configPackImport">配置：导入配置包</a-select-option>
+            <a-select-option value="healthScan">诊断：执行扫描</a-select-option>
+            <a-select-option value="healthFix">诊断：执行修复</a-select-option>
+            <a-select-option value="scheduleRun">定时任务：触发执行</a-select-option>
           </a-select>
           <a-input-search v-model:value="fText" size="small" style="width: 220px" placeholder="按变量名过滤" allow-clear />
         </div>

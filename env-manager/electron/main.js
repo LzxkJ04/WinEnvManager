@@ -367,6 +367,10 @@ app.setAppUserModelId('com.winenvmanager.app')
  * 看不到任何输出也不像报错。没带 --cli 时直接显示用法，避免看起来像「点了没反应」。
  */
 const cliIdx = process.argv.indexOf('--cli')
+/* 系统任务计划唤起：--scheduled-run <taskId>，无界面执行后立即退出。
+ * 只允许备份 / 扫描 / 导出类只读任务，修改类操作不得由定时任务触发。
+ */
+const schedIdx = process.argv.indexOf('--scheduled-run')
 if (cliIdx >= 0) {
   app.whenReady().then(async () => {
     const { run } = require('./lib/cli')
@@ -387,6 +391,27 @@ if (cliIdx >= 0) {
     writeCliErr(err)
     app.exit(1)
   })
+} else if (schedIdx >= 0) {
+  // 由 Windows 任务计划程序唤起，后台执行一个定时任务，完成即退出
+  const taskId = process.argv[schedIdx + 1] || ''
+  app.whenReady().then(async () => {
+    let code = 0
+    try {
+      if (!taskId) throw new Error('缺少任务 ID')
+      store.ensureAll()
+      const mod = require('./ipc/reg-extra')
+      const runner = mod.runScheduledTask
+      if (typeof runner !== 'function') throw new Error('定时任务执行器不可用')
+      await runner(taskId)
+      store.writeLog('info', '定时任务由系统计划执行完成', taskId)
+    } catch (err) {
+      code = 1
+      try {
+        store.writeLog('error', '定时任务由系统计划执行失败', { taskId, message: err && err.message })
+      } catch { /* ignore */ }
+    }
+    app.exit(code)
+  }).catch(() => app.exit(1))
 } else {
   // 多实例开关（高级设置）：默认禁止多开，防止配置文件读写冲突
   const allowMultiInstance = store.readConfig().allowMultiInstance === true

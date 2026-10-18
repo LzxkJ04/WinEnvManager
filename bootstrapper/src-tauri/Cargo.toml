@@ -1,6 +1,6 @@
 [package]
 name = "winenv-bootstrapper"
-version = "1.1.0"
+version = "1.2.0"
 description = "WinEnv管家 安装引导壳"
 edition = "2021"
 

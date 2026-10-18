@@ -11,7 +11,8 @@ const call = (channel) => (payload) => ipcRenderer.invoke(channel, payload)
 const ALLOWED_EVENTS = [
   'tray:action', 'theme:system-changed', 'window:maximize-changed', 'app:before-quit',
   'app:quit-query', 'app:scheduled',
-  'task:change', 'devenv:scan-progress', 'env:external-changed', 'envset:project-activity'
+  'task:change', 'devenv:scan-progress', 'env:external-changed', 'envset:project-activity',
+  'reg:external-changed', 'reg:restored', 'health:scan-progress', 'regReplace:progress'
 ]
 
 contextBridge.exposeInMainWorld('envAPI', {
@@ -247,6 +248,122 @@ contextBridge.exposeInMainWorld('envAPI', {
     close: call('win:close'),
     hideToTray: call('win:hideToTray'),
     resetBounds: call('win:resetBounds')
+  },
+
+  /* ==================== 注册表模块（契约固定，勿改结构） ==================== */
+
+  /* 注册表浏览与键值读写 */
+  reg: {
+    // 树与键值
+    roots: call('reg:roots'),
+    subKeys: call('reg:subKeys'),
+    values: call('reg:values'),
+    readTree: call('reg:readTree'),
+    envPaths: call('reg:envPaths'),
+    isAdmin: call('reg:isAdmin'),
+    keyExists: call('reg:keyExists'),
+    // 写入
+    createKey: call('reg:createKey'),
+    setValue: call('reg:setValue'),
+    deleteValue: call('reg:deleteValue'),
+    deleteKey: call('reg:deleteKey'),
+    // 导入导出
+    exportReg: call('reg:exportReg'),
+    parseReg: call('reg:parseReg'),
+    previewImport: call('reg:previewImport'),
+    applyImport: call('reg:applyImport'),
+    // 搜索
+    search: call('reg:search'),
+    broadcast: call('reg:broadcast'),
+    // 选择文件/目录
+    pickRegFile: call('reg:pickRegFile'),
+    pickSaveReg: call('reg:pickSaveReg')
+  },
+
+  /* 注册表备份管理 */
+  regBackup: {
+    list: call('regBackup:list'),
+    create: call('regBackup:create'),
+    preview: call('regBackup:preview'),
+    restore: call('regBackup:restore'),
+    remove: call('regBackup:remove'),
+    toggleProtect: call('regBackup:toggleProtect'),
+    exportFile: call('regBackup:exportFile'),
+    openDir: call('regBackup:openDir'),
+    prune: call('regBackup:prune')
+  },
+
+  /* 注册表对比 */
+  regDiff: {
+    compare: call('regDiff:compare'),
+    compareWithCurrent: call('regDiff:compareWithCurrent'),
+    exportReport: call('regDiff:exportReport'),
+    buildRollback: call('regDiff:buildRollback')
+  },
+
+  /* 注册表依赖分析 */
+  regDep: {
+    analyze: call('regDep:analyze'),
+    findReferences: call('regDep:findReferences'),
+    graph: call('regDep:graph')
+  },
+
+  /* 注册表变更监控 */
+  regWatch: {
+    list: call('regWatch:list'),
+    add: call('regWatch:add'),
+    remove: call('regWatch:remove'),
+    start: call('regWatch:start'),
+    stop: call('regWatch:stop'),
+    logs: call('regWatch:logs'),
+    clearLogs: call('regWatch:clearLogs'),
+    exportLogs: call('regWatch:exportLogs')
+  },
+
+  /* 批量查找替换 */
+  regReplace: {
+    scan: call('regReplace:scan'),
+    apply: call('regReplace:apply')
+  },
+
+  /* 注册表收藏夹 */
+  regFav: {
+    list: call('regFav:list'),
+    create: call('regFav:create'),
+    update: call('regFav:update'),
+    remove: call('regFav:remove'),
+    groups: call('regFav:groups'),
+    exportJson: call('regFav:exportJson'),
+    importJson: call('regFav:importJson')
+  },
+
+  /* 全软件配置打包 */
+  configPack: {
+    exportPack: call('configPack:exportPack'),
+    inspectPack: call('configPack:inspectPack'),
+    importPack: call('configPack:importPack'),
+    pickSave: call('configPack:pickSave'),
+    pickOpen: call('configPack:pickOpen')
+  },
+
+  /* 环境健康诊断 */
+  health: {
+    scan: call('health:scan'),
+    previewFix: call('health:previewFix'),
+    applyFix: call('health:applyFix'),
+    exportReport: call('health:exportReport'),
+    lastScore: call('health:lastScore')
+  },
+
+  /* 定时任务 */
+  schedule: {
+    list: call('schedule:list'),
+    create: call('schedule:create'),
+    update: call('schedule:update'),
+    remove: call('schedule:remove'),
+    runNow: call('schedule:runNow'),
+    setEnabled: call('schedule:setEnabled'),
+    preview: call('schedule:preview')
   },
 
   /* 主进程 -> 渲染进程 事件订阅（白名单） */

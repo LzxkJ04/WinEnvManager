@@ -2,7 +2,7 @@
 ; 功能：升级检测 / 关闭运行中程序 / 可选加入系统 PATH / 卸载可选删用户数据
 
 #define MyAppName "WinEnv管家"
-#define MyAppVersion "1.1.0"
+#define MyAppVersion "1.2.0"
 #define MyAppExeName "WinEnvManager.exe"
 
 [Setup]

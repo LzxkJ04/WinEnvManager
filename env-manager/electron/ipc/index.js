@@ -31,6 +31,15 @@ function registerAll(ctx) {
   require('./analyze').register(handle, ctx)
   require('./tableprefs').register(handle, ctx)
   require('./projectenv').register(handle, ctx)
+
+  // 注册表模块（新增）。文件缺失时跳过，避免并行开发期间互相阻塞。
+  for (const name of ['registry', 'reg-backup', 'reg-extra']) {
+    try {
+      require(`./${name}`).register(handle, ctx)
+    } catch (err) {
+      if (err && err.code !== 'MODULE_NOT_FOUND') throw err
+    }
+  }
 }
 
 module.exports = { registerAll, handle }

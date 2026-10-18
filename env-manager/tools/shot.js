@@ -12,6 +12,10 @@ const ROUTES = [
   ['system', '系统变量管理'],
   ['path', 'PATH 路径专项管理'],
   ['devenv', '开发环境管理'],
+  ['registry', '注册表管理'],
+  ['registry-backup', '注册表备份'],
+  ['health', '环境健康诊断'],
+  ['schedules', '定时任务管理'],
   ['envsets', '环境配置集'],
   ['backup', '备份与还原'],
   ['snapshot', '变量快照 & 差异对比'],
@@ -52,6 +56,12 @@ app.whenReady().then(async () => {
   const indexPath = path.join(__dirname, '..', 'dist', 'index.html')
   await win.loadFile(indexPath)
   await sleep(3500)
+  // 跳过首次启动向导，否则遮罩会挡住每个页面的截图
+  await win.webContents.executeJavaScript(`try { localStorage.setItem('wem-wizard-done', '1') } catch (e) {}`)
+  win.webContents.reload()
+  await sleep(2500)
+  await win.webContents.executeJavaScript(`try { localStorage.setItem('wem-wizard-done', '1') } catch (e) {}`)
+  await sleep(500)
   win.showInactive()
   await sleep(600)
 

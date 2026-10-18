@@ -48,6 +48,8 @@
         <div class="toolbar">
           <a-button size="small" :disabled="!health" @click="copyHealthReport">复制报告</a-button>
           <a-button size="small" :loading="healthLoading" @click="runHealth">重新检查</a-button>
+          <a-button size="small" @click="router.push('/health')">诊断中心</a-button>
+          <a-button size="small" @click="router.push('/registry')">查看底层注册表</a-button>
         </div>
       </div>
       <div class="wem-card-body">
