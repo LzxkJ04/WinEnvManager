@@ -67,5 +67,5 @@
 - 批量导入导出（reg / json / env / properties）
 - 深色 / 浅色主题切换
 
-[1.1.0]: https://github.com/OWNER/WinEnvManager/compare/v1.0.0...v1.1.0
-[1.0.0]: https://github.com/OWNER/WinEnvManager/releases/tag/v1.0.0
+[1.1.0]: https://github.com/LzxkJ04/WinEnvManager/compare/v1.0.0...v1.1.0
+[1.0.0]: https://github.com/LzxkJ04/WinEnvManager/releases/tag/v1.0.0

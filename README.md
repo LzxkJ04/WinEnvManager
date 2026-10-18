@@ -50,7 +50,7 @@ WinEnv管家用于集中管理用户级与系统级环境变量、PATH 条目、
 ## 安装
 
 ### 方式一：安装包（推荐）
-1. 下载 `WinEnvManager-v1.1.0-setup.exe`
+1. 下载 [WinEnvManager-Setup-1.1.0.exe](https://github.com/LzxkJ04/WinEnvManager/releases/latest/download/WinEnvManager-Setup-1.1.0.exe)
 2. 双击运行，按向导完成安装
 3. 默认安装位置 `C:\Program Files\WinEnvManager`
 
@@ -61,15 +61,17 @@ WinEnv管家用于集中管理用户级与系统级环境变量、PATH 条目、
 - 可选任务：桌面快捷方式、`.winenv-setting` 关联、右键菜单、开机自启
 
 ### 方式二：便携版
-下载 `WinEnvManager-1.1.0-portable.exe` 直接运行，无需安装。
+下载 [WinEnvManager-Portable-1.1.0.zip](https://github.com/LzxkJ04/WinEnvManager/releases/latest/download/WinEnvManager-Portable-1.1.0.zip)，解压后双击其中的 exe 直接运行，无需安装。
 
 便携模式下用户数据跟随程序所在目录（`UserData\` 子目录），不读注册表安装信息，适合放在 U 盘或多机使用。
 
 ### 方式三：安装向导
-`WinEnvManager-v1.1.0-安装向导.exe` 是带前置检查的图形化封装：
+[WinEnvManager-Wizard-1.1.0.exe](https://github.com/LzxkJ04/WinEnvManager/releases/latest/download/WinEnvManager-Wizard-1.1.0.exe) 是带前置检查的图形化封装：
 - 自动检测 Windows 版本、管理员权限、WebView2、磁盘空间、运行中进程
 - 支持一键修复 / 更改安装选项 / 卸载
 - 后台静默调用安装引擎，无需人工干预
+
+> 全部制品见 [Releases](https://github.com/LzxkJ04/WinEnvManager/releases/latest)，附 `SHA256SUMS.txt` 供校验。
 
 ---
 
