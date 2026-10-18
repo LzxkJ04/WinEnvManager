@@ -19,13 +19,13 @@ const DEMO_USER = {
   JAVA_HOME: 'C:\\dev\\soft\\jdk-17',
   MAVEN_HOME: 'C:\\dev\\soft\\apache-maven-3.9.9',
   http_proxy: 'http://127.0.0.1:7890',
-  GITHUB_TOKEN: 'ghp_a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8'
+  // 仅用于浏览器演示的脱敏示例值，不是真实凭据
+  GITHUB_TOKEN: '<示例令牌-已脱敏>'
 }
 const DEMO_MACHINE = {
   Path:
-    'C:\\tools\\Python315\\Scripts;C:\\tools\\Python315;C:\\tools\\nodejs;C:\\tools\\rtk-x86_64-pc-windows-msvc;' +
-    '%SystemRoot%\\system32;%SystemRoot%;%SystemRoot%\\System32\\Wbem;C:\\Windows\\System32\\OpenSSH\\;' +
-    'C:\\Program Files\\NVIDIA Corporation\\NVIDIA App\\NvDLISR',
+    'C:\\tools\\Python315\\Scripts;C:\\tools\\Python315;C:\\tools\\nodejs;' +
+    '%SystemRoot%\\system32;%SystemRoot%;%SystemRoot%\\System32\\Wbem;C:\\Windows\\System32\\OpenSSH\\',
   ComSpec: '%SystemRoot%\\system32\\cmd.exe',
   OS: 'Windows_NT',
   PATHEXT: '.COM;.EXE;.BAT;.CMD;.VBS;.JS;.WS;.MSC',
@@ -187,7 +187,7 @@ const demoApi = {
   },
 
   analyze: {
-    sensitiveScan: () => ok({ total: 1, items: [{ scope: 'user', name: 'GITHUB_TOKEN', value: demoState.user.GITHUB_TOKEN, labels: ['API Key'], masked: 'ghp_****q7r8' }] }),
+    sensitiveScan: () => ok({ total: 1, items: [{ scope: 'user', name: 'GITHUB_TOKEN', value: demoState.user.GITHUB_TOKEN, labels: ['API Key'], masked: '<示例令牌-已脱敏>' }] }),
     refs: (p) => ok({ name: p.name, referencedBy: [], count: 0 }),
     brokenRefs: () => ok({ total: 1, items: [{ scope: 'user', name: 'MAVEN_HOME', ref: 'OLD_JDK', value: '%OLD_JDK%\\bin' }] }),
     circularRefs: () => ok({ total: 0, items: [] }),
