@@ -1,0 +1,61 @@
+# ---- 依赖 ----
+node_modules/
+**/node_modules/
+
+# ---- 构建产物 ----
+dist/
+**/dist/
+out/
+out-release/
+target/
+**/target/
+build/__pycache__/
+__pycache__/
+*.pyc
+
+# ---- 本地产物 / 发布载荷 ----
+# 可执行文件与安装包由 release-all 生成，不进版本库
+out-release/*.exe
+installer-web/output/
+installer-web/pkg/WinEnvManager.exe
+installer-web/pkg/cli/
+installer-web/pkg/default_templates/
+installer-web/pkg/resources/
+bootstrapper/src-tauri/payload/
+*.exe
+*.msi
+*.blockmap
+!installer-web/pkg/WinEnvManager.ico
+
+# ---- Rust 工具链（本机安装，非项目源码）----
+bootstrapper/src-tauri/toolsrustup/
+
+# ---- 运行时 / 本地数据 ----
+.shots/
+.tmp-portable-test/
+UserData/
+*.log
+.eb-release.json
+eb-release.json
+
+# ---- 编辑器 / 系统 ----
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ---- 工作记忆（含本机绝对路径，不公开）----
+.workbuddy/
+
+# ---- 旧版本备份 ----
+env-manager/.backup-v1/
+release-out/
+
+# ---- 调试 / 临时残留 ----
+bootstrapper/drive-log.txt
+tools/fix-*.py
+tools/fix-*.cjs
+tools/append-memory.py
+env-manager/tools/test-adapt-result.json
+installer-web/_err.txt

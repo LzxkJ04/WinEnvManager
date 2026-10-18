@@ -1,0 +1,732 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<style>
+:root{
+  --bg:#eef3fb; --panel:#ffffff; --panel2:#f3f6fc; --border:#d5deee;
+  --text:#1b2436; --sub:#5d6b86; --accent:#165DFF; --accent2:#6d4dff;
+  --ok:#12a36a; --warn:#d48806; --bad:#e5484d;
+  --lic:#3d4b66; --tipbg:rgba(212,136,6,.08); --tipbd:rgba(212,136,6,.35); --tiptx:#8a5a10;
+  --boxbd:#b7c3da; --hover:#c5d2ea; --shadow:0 8px 24px rgba(22,93,255,.18);
+  --dot:#c5d0e4; --onbtn:#fff;
+}
+html[data-theme="dark"]{
+  --bg:#0b1020; --panel:#121a30; --panel2:#182342; --border:#26355c;
+  --text:#e8ecf7; --sub:#8b96b5; --accent:#4d94ff; --accent2:#7b5cff;
+  --ok:#3fd68f; --warn:#ffb454; --bad:#ff6b6b;
+  --lic:#c7cfe6; --tipbg:rgba(255,180,84,.08); --tipbd:rgba(255,180,84,.3); --tiptx:#ffd9a0;
+  --boxbd:#4a5a85; --hover:#3a4d82; --shadow:0 6px 18px rgba(77,148,255,.35);
+  --dot:#2a3757; --onbtn:#fff;
+}
+*{margin:0;padding:0;box-sizing:border-box;font-family:"Microsoft YaHei UI","PingFang SC",sans-serif}
+body{background:linear-gradient(160deg,#e7eef9 0%,#f7f9fd 48%,#e4ebf8 100%);color:var(--text);height:100vh;overflow:hidden;user-select:none}
+html[data-theme="dark"] body{background:linear-gradient(135deg,#0b1020 0%,#101a38 60%,#131f42 100%)}
+#app{display:flex;flex-direction:column;height:100%}
+/* 顶部横幅 */
+#banner{height:56px;display:flex;align-items:center;gap:12px;padding:0 22px;border-bottom:1px solid var(--border);flex-shrink:0;background:rgba(255,255,255,.55);backdrop-filter:blur(8px)}
+html[data-theme="dark"] #banner{background:rgba(11,16,32,.55)}
+#banner .logo{width:36px;height:36px;border-radius:9px;object-fit:cover;display:block}
+#banner .t{font-size:17px;font-weight:700}
+#banner .v{font-size:12px;color:var(--sub);margin-left:6px}
+#banner .right{font-size:12px;color:var(--sub)}
+/* 主体 */
+#body{flex:1;min-height:0;overflow-y:auto;padding:18px 28px 12px}
+#body::-webkit-scrollbar{width:8px}
+#body::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
+.page{display:none}
+.page.active{display:block;animation:fade .28s ease}
+@keyframes fade{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+h1{font-size:22px;margin-bottom:4px}
+.grad{background:linear-gradient(90deg,var(--accent),var(--accent2));-webkit-background-clip:text;background-clip:text;color:transparent}
+.sub{color:var(--sub);font-size:13px;line-height:1.6;margin-bottom:12px}
+.card{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:12px 16px;margin-bottom:10px;transition:border-color .2s,box-shadow .2s}
+.card:hover{box-shadow:0 4px 14px rgba(22,93,255,.06)}
+.card:hover{border-color:var(--hover)}
+.card .ct{font-weight:600;margin-bottom:4px;display:flex;align-items:center;gap:8px}
+.card .cd{font-size:12.5px;color:var(--sub);line-height:1.7}
+/* 检测项 */
+.chk{display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px dashed var(--border)}
+.chk:last-child{border-bottom:none}
+.dot{width:10px;height:10px;border-radius:50%;background:#556;flex-shrink:0}
+.dot.ok{background:var(--ok);box-shadow:0 0 8px var(--ok)}
+.dot.bad{background:var(--bad);box-shadow:0 0 8px var(--bad)}
+.dot.warn{background:var(--warn);box-shadow:0 0 8px var(--warn)}
+.dot.pulse{animation:pulse 1.2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+.chk .nm{font-size:13.5px}
+.chk .rs{margin-left:auto;font-size:12.5px;color:var(--sub)}
+.btn-min{padding:5px 14px;border-radius:8px;border:1px solid var(--accent);background:rgba(77,148,255,.12);color:var(--accent);font-size:12.5px;cursor:pointer}
+.btn-min:hover{background:rgba(77,148,255,.28)}
+/* 复选选项行 */
+.opt{display:flex;align-items:center;gap:12px;padding:8px 14px;border:1px solid var(--border);border-radius:10px;margin-bottom:7px;cursor:pointer;background:var(--panel);transition:border-color .15s,transform .15s}
+.opt:hover{border-color:var(--hover);transform:translateX(2px)}
+.opt.sel{border-color:var(--accent);background:linear-gradient(90deg,rgba(77,148,255,.10),transparent)}
+.box{width:18px;height:18px;border-radius:5px;border:1.5px solid var(--boxbd);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:12px;color:#fff}
+.opt.sel .box{background:linear-gradient(135deg,var(--accent),var(--accent2));border-color:transparent}
+.box.fixed{background:var(--dot);border-color:var(--dot);cursor:not-allowed}
+.opt .ot{font-size:13.5px}
+.opt .od{font-size:11.5px;color:var(--sub);margin-top:2px}
+/* 双路径 */
+.dir-card{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:14px 16px;margin-bottom:12px}
+.dir-card .row{display:flex;gap:10px;margin-top:10px}
+input[type=text]{flex:1;background:var(--panel2);border:1px solid var(--border);border-radius:9px;padding:10px 14px;color:var(--text);font-size:13px;outline:none}
+input[type=text]:focus{border-color:var(--accent)}
+.btn-browse{padding:9px 18px;border-radius:9px;border:1px solid var(--border);background:var(--panel2);color:var(--text);font-size:13px;cursor:pointer}
+.btn-browse:hover{border-color:var(--accent)}
+.hint{font-size:12px;margin-top:8px;min-height:16px}
+.hint.bad{color:var(--bad)} .hint.warn{color:var(--warn)} .hint.ok{color:var(--ok)}
+/* 汇总 */
+.sum-item{display:flex;padding:9px 0;border-bottom:1px dashed var(--border);font-size:13.5px}
+.sum-item:last-child{border:none}
+.sum-item .k{width:190px;color:var(--sub)}
+/* 进度 */
+#progWrap{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%}
+#progBar{width:100%;max-width:520px;height:14px;background:var(--panel2);border-radius:7px;overflow:hidden;border:1px solid var(--border);margin:26px 0 12px}
+#progFill{height:100%;width:0%;border-radius:7px;background:linear-gradient(90deg,var(--accent),var(--accent2));background-size:200% 100%;animation:flow 1.6s linear infinite;transition:width .4s}
+@keyframes flow{0%{background-position:0 0}100%{background-position:200% 0}}
+#progPct{font-size:34px;font-weight:800}
+#progStat{color:var(--sub);font-size:13px;margin-top:6px;min-height:20px}
+/* 完成页 */
+.done-icon{width:84px;height:84px;border-radius:50%;background:linear-gradient(135deg,var(--ok),#1fa873);display:flex;align-items:center;justify-content:center;font-size:42px;margin:8px auto 18px;animation:pop .45s cubic-bezier(.2,1.6,.4,1)}
+@keyframes pop{from{transform:scale(0)}to{transform:scale(1)}}
+/* 底栏 */
+#footer{height:62px;border-top:1px solid var(--border);display:flex;align-items:center;padding:0 22px;gap:10px;flex-shrink:0;background:var(--panel)}
+#stepName{margin-left:auto;font-size:12px;color:var(--sub)}
+#pageDots{display:flex;gap:7px}
+.dotp{width:8px;height:8px;border-radius:4px;background:var(--dot);transition:all .3s}
+.dotp.on{width:22px;background:linear-gradient(90deg,var(--accent),var(--accent2))}
+button.pg{padding:10px 30px;border-radius:10px;font-size:14px;cursor:pointer;border:1px solid var(--border);background:var(--panel2);color:var(--text)}
+button.pg:hover:not(:disabled){border-color:var(--accent)}
+button.pg.primary{background:linear-gradient(135deg,var(--accent),var(--accent2));border:none;font-weight:600;color:var(--onbtn)}
+button.pg.primary:hover:not(:disabled){transform:translateY(-1px);box-shadow:var(--shadow)}
+button.pg:disabled{opacity:.4;cursor:not-allowed}
+.tip-box{background:var(--tipbg);border:1px solid var(--tipbd);border-radius:11px;padding:12px 16px;font-size:12.5px;color:var(--tiptx);line-height:1.9;margin-bottom:14px}
+.danger-zone{border:1px solid rgba(255,107,107,.4)!important}
+.red{color:var(--bad)}
+.lic{background:var(--panel2);border:1px solid var(--border);border-radius:12px;padding:14px 16px;height:168px;overflow-y:auto;font-size:12.5px;line-height:1.8;color:var(--lic);margin-bottom:12px}
+.presets{display:flex;gap:8px;margin-bottom:12px}
+.presets button{padding:6px 14px;border-radius:999px;border:1px solid var(--border);background:var(--panel);color:var(--text);font-size:12.5px;cursor:pointer}
+.presets button.on{border-color:var(--accent);color:var(--accent);background:rgba(22,93,255,.08)}
+.sz{margin-left:auto;font-size:11.5px;color:var(--sub)}
+.steps{display:flex;gap:8px;margin-top:18px;width:100%;max-width:520px}
+.st{flex:1;text-align:center;font-size:12px;color:var(--sub);padding:8px 4px;border-radius:8px;border:1px solid var(--border);background:var(--panel)}
+.st.on{color:var(--accent);border-color:var(--accent)}
+.st.ok{color:var(--ok);border-color:var(--ok)}
+#themeBtn{margin-left:auto;margin-right:14px;padding:6px 14px;border-radius:999px;border:1px solid var(--border);background:var(--panel);color:var(--text);font-size:12.5px;cursor:pointer}
+#themeBtn:hover{border-color:var(--accent);color:var(--accent)}
+.lic::-webkit-scrollbar{width:8px}.lic::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="banner">
+    <img class="logo" src="icon.png" alt="" />
+    <div><span class="t">WinEnv管家</span><span class="v" id="verTag">v1.1.0</span></div>
+    <button id="themeBtn" type="button" title="切换浅色 / 深色">深色</button>
+    <div class="right" id="bannerRight">安装向导</div>
+  </div>
+  <div id="body">
+
+    <!-- 1 欢迎 -->
+    <div class="page active" id="pg0">
+      <h1>欢迎安装 <span class="grad">WinEnv管家</span></h1>
+      <p class="sub">Windows 环境变量一体化管理工具 —— 快照备份 · 多版本切换 · 目录扫描 · 导入导出</p>
+      <div class="card"><div class="ct">🎨 三模式主题</div><div class="cd">深色 / 浅色 / 跟随系统全局切换，实时生效；配置保存在用户数据目录，重装软件本体不丢失。</div></div>
+      <div class="card"><div class="ct">📦 双目录独立设计</div><div class="cd">程序本体与用户数据目录完全独立、可分别自定义；升级只覆盖本体，用户数据永久保留。</div></div>
+      <div class="card"><div class="ct">🚀 全自动部署</div><div class="cd">引导壳完成全部检测与配置后，后台静默执行安装，无需人工干预，支持中断回滚。</div></div>
+      <div class="card" id="installedCard" style="display:none">
+        <div class="ct">已安装 <span id="instVer">v1.1.0</span></div>
+        <div class="cd" id="instPath"></div>
+        <div style="display:flex;gap:10px;margin-top:12px">
+          <button class="pg primary" id="btnRepair" type="button">一键修复</button>
+          <button class="pg" id="btnReconfigure" type="button">更改选项</button>
+          <button class="pg" id="btnGoUninstall" type="button" style="border-color:rgba(229,72,77,.45);color:var(--bad)">卸载</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2 前置检测 -->
+    <div class="page" id="pg1">
+      <h1>系统环境检测</h1>
+      <p class="sub">安装前自动校验系统环境，全部通过后方可继续。</p>
+      <div class="card" id="chkList">
+        <div class="chk" id="cWin"><span class="dot pulse"></span><span class="nm">Windows 版本（≥ Win10 1903，仅 x64）</span><span class="rs">检测中…</span></div>
+        <div class="chk" id="cAdmin"><span class="dot pulse"></span><span class="nm">管理员权限</span><span class="rs">检测中…</span></div>
+        <div class="chk" id="cWv2"><span class="dot pulse"></span><span class="nm">WebView2 运行时（主程序依赖）</span><span class="rs">检测中…</span></div>
+        <div class="chk" id="cDisk"><span class="dot pulse"></span><span class="nm">磁盘空间（≥ 500MB）</span><span class="rs">检测中…</span></div>
+        <div class="chk" id="cProc"><span class="dot pulse"></span><span class="nm">旧版进程运行检测</span><span class="rs">检测中…</span></div>
+      </div>
+      <div class="hint" id="chkMsg"></div>
+    </div>
+
+    <!-- 3 许可 -->
+    <div class="page" id="pg2">
+      <h1>许可协议</h1>
+      <div class="lic" id="licText"></div>
+      <div class="opt" id="optAgree"><div class="box"></div><div><div class="ot">我已阅读并同意上述许可协议</div><div class="od">不勾选将无法继续安装</div></div></div>
+    </div>
+
+    <!-- 4 须知 -->
+    <div class="page" id="pg3">
+      <h1>安装前重要须知</h1>
+      <p class="sub">请了解以下目录与权限约定，避免误操作。</p>
+      <div class="card"><div class="ct">📦 程序本体目录</div><div class="cd">存放 EXE、依赖库、内置模板。升级时该目录将被覆盖；卸载时删除。</div></div>
+      <div class="card"><div class="ct">📂 用户数据目录</div><div class="cd">存储界面主题偏好、自定义规则、导出备份、快照、缓存与日志。升级完全不动此目录。</div></div>
+      <div class="tip-box">⚠️ 修改系统环境变量需要管理员权限<br>⚠️ 程序目录与用户数据目录<b>不能相同</b><br>⚠️ 用户数据目录建议放置非系统盘，减少 C 盘占用</div>
+    </div>
+
+    <!-- 5 组件 -->
+    <div class="page" id="pg4">
+      <h1>选择要安装的组件</h1>
+      <p class="sub">按需勾选，或直接套用一套预设。</p>
+      <div class="presets">
+        <button type="button" id="preFull" class="on">完整</button>
+        <button type="button" id="preRec">推荐</button>
+        <button type="button" id="preMin">精简</button>
+      </div>
+      <div class="opt sel fixed" id="cbMain"><div class="box fixed">✓</div><div><div class="ot">主程序核心</div><div class="od">必需组件，不可取消</div></div></div>
+      <div class="opt sel" id="cbTemplates"><div class="box">✓</div><div><div class="ot">内置扫描规则模板</div><div class="od">出厂基线配置与环境变量预设</div></div><span class="sz">约 1 MB</span></div>
+      <div class="opt sel" id="cbCli"><div class="box">✓</div><div><div class="ot">命令行工具 wenv.exe</div><div class="od">脚本化读取与修改环境变量</div></div><span class="sz">约 1 MB</span></div>
+      <div class="opt sel" id="cbDesktop"><div class="box">✓</div><div><div class="ot">桌面快捷方式</div></div></div>
+      <div class="opt sel" id="cbStartmenu"><div class="box">✓</div><div><div class="ot">开始菜单快捷方式</div></div></div>
+      <div class="opt" id="cbShellctx"><div class="box"></div><div><div class="ot">资源管理器右键菜单</div><div class="od">「用WinEnv管家扫描目录」</div></div></div>
+      <div class="opt" id="cbAddpath"><div class="box"></div><div><div class="ot">将 wenv 加入系统 PATH</div><div class="od">任意目录直接使用 wenv 命令</div></div></div>
+      <div class="opt sel" id="cbReadme"><div class="box">✓</div><div><div class="ot">安装自述文档与快速入门</div></div></div>
+    </div>
+
+    <!-- 6 双路径 -->
+    <div class="page" id="pg5">
+      <h1>安装位置</h1>
+      <p class="sub">程序本体与用户数据目录相互独立，可分别存放在不同磁盘。</p>
+      <div class="dir-card">
+        <div class="ct">📦 程序本体目录</div>
+        <div class="cd">主程序、依赖库、内置模板。升级时覆盖此目录。</div>
+        <div class="row"><input type="text" id="inApp"><button class="btn-browse" data-copy="inApp">复制</button><button class="btn-browse" data-for="inApp">浏览…</button></div>
+        <div class="hint" id="hintApp"></div>
+        <div class="hint" id="freeApp"></div>
+      </div>
+      <div class="dir-card">
+        <div class="ct">📂 用户数据目录</div>
+        <div class="cd">主题偏好、自定义规则、导出备份、快照、缓存、日志。升级不会改动。</div>
+        <div class="row"><input type="text" id="inData"><button class="btn-browse" data-copy="inData">复制</button><button class="btn-browse" data-for="inData">浏览…</button></div>
+        <div class="hint" id="hintData"></div>
+        <div class="hint" id="freeData"></div>
+      </div>
+      <div class="hint" id="hintBoth"></div>
+    </div>
+
+    <!-- 7 高级 -->
+    <div class="page" id="pg6">
+      <h1>高级安装选项</h1>
+      <p class="sub">以下选项均可随时在软件内调整。</p>
+      <div class="opt sel" id="cbAssoc"><div class="box">✓</div><div><div class="ot">注册 .winenv-setting 文件关联</div><div class="od">双击配置备份文件直接唤起软件导入</div></div></div>
+      <div class="opt sel" id="cbUninstReg"><div class="box">✓</div><div><div class="ot">注册控制面板卸载项</div><div class="od">在「应用和功能」中提供卸载入口</div></div></div>
+      <div class="opt" id="cbAutostart"><div class="box"></div><div><div class="ot">开机自动启动 WinEnv管家</div></div></div>
+      <div class="opt" id="cbLog"><div class="box"></div><div><div class="ot">启用安装日志（调试用途）</div><div class="od">记录每一步底层操作，便于排查问题</div></div></div>
+    </div>
+
+    <!-- 8 汇总 -->
+    <div class="page" id="pg7">
+      <h1>准备安装</h1>
+      <p class="sub">确认以下配置，点击「安装」开始后台静默部署。</p>
+      <div class="card" id="sumBox"></div>
+      <div class="tip-box">💡 安装完成后，在软件【设置 → 界面偏好】切换深色 / 浅色 / 跟随系统主题，实时生效。</div>
+      <div class="hint" id="estSize"></div>
+      <div class="card" id="migRow" style="display:none"><div class="opt sel" id="cbMigrate" style="border:none;padding:0;margin:0"><div class="box">✓</div><div><div class="ot">迁移旧版用户数据到新目录</div><div class="od" id="migDesc"></div></div></div></div>
+    </div>
+
+    <!-- 9 进度 -->
+    <div class="page" id="pg8">
+      <div id="progWrap">
+        <div id="progPct" class="grad">0%</div>
+        <div id="progBar"><div id="progFill"></div></div>
+        <div id="progStat">正在准备…</div>
+        <div class="steps">
+          <div class="st" id="st1">准备</div>
+          <div class="st" id="st2">复制文件</div>
+          <div class="st" id="st3">写入配置</div>
+          <div class="st" id="st4">完成</div>
+        </div>
+        <div style="margin-top:22px"><button class="pg" id="btnCancel">取消安装</button></div>
+        <div class="hint bad" id="progErr" style="margin-top:14px;max-width:520px;text-align:center"></div>
+        <div id="failActs" style="display:none;margin-top:14px;gap:10px">
+          <button class="pg" id="btnRetry" type="button">返回重试</button>
+          <button class="pg" id="btnLog" type="button">查看日志</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 10 完成 -->
+    <div class="page" id="pg9">
+      <div style="text-align:center">
+        <div class="done-icon">🎉</div>
+        <h1 style="margin-bottom:6px">安装成功</h1>
+        <p class="sub">WinEnv管家 已就绪，去软件设置里挑一个喜欢的主题吧。</p>
+      </div>
+      <div class="opt sel" id="cbRun"><div class="box">✓</div><div class="ot">立即启动 WinEnv管家</div></div>
+      <div class="opt" id="cbOpenData"><div class="box"></div><div class="ot">打开用户数据目录</div></div>
+      <div class="opt" id="cbDoc"><div class="box"></div><div class="ot">打开快速入门文档</div></div>
+      <div class="hint ok" id="doneHint" style="text-align:center;margin-top:8px"></div>
+    </div>
+
+    <!-- 卸载1 欢迎确认 -->
+    <div class="page" id="ug0">
+      <h1>卸载 <span class="grad">WinEnv管家</span></h1>
+      <p class="sub" id="unVer">检测到已安装版本：—</p>
+      <div class="tip-box danger-zone">⚠️ <b class="red">高危选项</b>：删除用户数据后将无法恢复（主题偏好、自定义规则、导出备份、快照、缓存、日志）</div>
+      <div class="card" id="unList"></div>
+      <div class="opt" id="cbDelData" style="border-color:rgba(255,107,107,.4)"><div class="box"></div><div><div class="ot red">删除全部用户数据</div><div class="od">默认不勾选；保留数据可在重装后继续使用</div></div></div>
+      <div class="hint" id="unHint"></div>
+    </div>
+    <!-- 卸载2 进度 -->
+    <div class="page" id="ug1">
+      <div id="progWrap">
+        <div id="unPct" class="grad" style="font-size:34px;font-weight:800">…</div>
+        <div id="progBar2" style="width:100%;max-width:520px;height:14px;background:var(--panel2);border-radius:7px;overflow:hidden;border:1px solid var(--border);margin:26px 0 12px"><div id="unFill" style="height:100%;width:0%;border-radius:7px;background:linear-gradient(90deg,#ff6b6b,#7b5cff);transition:width .4s"></div></div>
+        <div id="unStat" style="color:var(--sub);font-size:13px">正在卸载…</div>
+        <div class="hint" id="unErr" style="margin-top:14px"></div>
+      </div>
+    </div>
+    <!-- 卸载3 完成 -->
+    <div class="page" id="ug2">
+      <div style="text-align:center">
+        <div class="done-icon">✓</div>
+        <h1 style="margin-bottom:6px">卸载完成</h1>
+        <p class="sub" id="unDoneMsg">程序本体与注册信息已清除。</p>
+      </div>
+    </div>
+
+  </div>
+  <div id="footer">
+    <button class="pg" id="btnBack" style="display:none">上一步</button>
+    <button class="pg primary" id="btnNext" disabled>下一步</button>
+    <button class="pg" id="btnQuit">取消</button>
+    <div id="stepName"></div>
+    <div id="pageDots"></div>
+  </div>
+</div>
+
+<script>
+const invoke = window.__TAURI__.core.invoke;
+const $ = id => document.getElementById(id);
+
+function applyTheme(mode){
+  const sysDark = matchMedia('(prefers-color-scheme: dark)').matches;
+  const dark = mode === 'dark' || (mode === 'system' && sysDark);
+  document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+  $('themeBtn').textContent = mode === 'system' ? '跟随系统' : (mode === 'dark' ? '深色' : '浅色');
+  $('themeBtn').title = '当前：' + $('themeBtn').textContent + '，点击切换';
+  try { localStorage.setItem('winenv-setup-theme', mode); } catch(e){}
+}
+applyTheme(localStorage.getItem('winenv-setup-theme') || 'light');
+$('themeBtn').addEventListener('click', ()=>{
+  const cur = localStorage.getItem('winenv-setup-theme') || 'light';
+  applyTheme(cur === 'light' ? 'dark' : cur === 'dark' ? 'system' : 'light');
+});
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', ()=>{
+  if (localStorage.getItem('winenv-setup-theme') === 'system') applyTheme('system');
+});
+let page = 0;
+let installing = false;
+let uninstalling = false;
+let info = null;
+let sys = null;
+let lastPhase = '';
+
+const PAGES = 10;
+$('verTag').textContent = 'v1.1.0';
+
+// ---------- 通用 ----------
+function show(p){
+  page = p;
+  document.querySelectorAll('.page').forEach(e=>e.classList.remove('active'));
+  $('pg'+p).classList.add('active');
+  refreshNav();
+}
+function refreshNav(){
+  const installFlow = page < PAGES;
+  $('btnBack').style.display = (installFlow && page>0 && page!==8 && page!==9) ? '' : 'none';
+  $('btnNext').style.display = installFlow ? '' : 'none';
+  $('btnQuit').style.display = installFlow ? '' : 'none';
+  $('btnNext').textContent = (page===7) ? '安 装' : (page===8 ? '安装中…' : (page===9 ? '完 成' : '下一步'));
+  // 每页启用条件
+  let ok = true;
+  if (page===1) ok = sysChkAllPass();
+  if (page===2) ok = $('optAgree').classList.contains('sel');
+  if (page===5) ok = validatePaths(true).ok;
+  $('btnNext').disabled = !ok;
+  const names = ['欢迎','检测','许可','须知','组件','路径','选项','确认','安装','完成'];
+  $('stepName').textContent = installFlow ? (page+1) + ' / 10 · ' + names[page] : '';
+  // 指示点
+  const dots = [];
+  for(let i=0;i<10;i++) dots.push(`<div class="dotp ${i===page?'on':''}"></div>`);
+  $('pageDots').innerHTML = installFlow ? dots.join('') : '';
+}
+function opt(id){ $(id).addEventListener('click', ()=>{ if($(id).querySelector('.box.fixed'))return; $(id).classList.toggle('sel'); refreshNav(); }); }
+['optAgree','cbTemplates','cbCli','cbDesktop','cbStartmenu','cbShellctx','cbAddpath','cbReadme','cbAssoc','cbUninstReg','cbAutostart','cbLog','cbRun','cbOpenData','cbDoc','cbDelData','cbMigrate'].forEach(opt);
+
+// ---------- 检测页 ----------
+function sysChkAllPass(){
+  return !!(sys && sys.winOk && sys.isAdmin && sys.webview2 && !sys.downgrade && !$('cProc').dataset.bad);
+}
+async function runChecks(){
+  sys = await invoke('sys_info');
+  setChk('cWin', sys.winOk, `Build ${sys.winBuild}`);
+  setChk('cAdmin', sys.isAdmin, sys.isAdmin ? '已提权' : '未提权（拦截）');
+  setChk('cWv2', sys.webview2, sys.webview2 ? '已安装' : '缺失');
+  // 磁盘
+  try {
+    const [free] = await invoke('disk_free', { path: 'C:\\' });
+    setChk('cDisk', free > 500*1024*1024, Math.floor(free/1024/1024/1024) + ' GB 可用');
+  } catch(e){ setChk('cDisk', false, '无法读取'); }
+  // 进程
+  if (sys.procRunning){
+    $('cProc').querySelector('.dot').className = 'dot warn';
+    $('cProc').querySelector('.rs').textContent = '正在运行';
+    const b = document.createElement('button'); b.className='btn-min'; b.textContent='自动终止';
+    b.onclick = async ()=>{ await invoke('kill_proc'); sys.procRunning=false; setChk('cProc', true, '已终止'); refreshNav(); };
+    $('cProc').appendChild(b);
+    $('cProc').dataset.bad = '0'; // 可处理，不硬拦截
+  } else setChk('cProc', true, '无运行实例');
+  // 旧版本
+  if (sys.installedVersion){
+    if (sys.downgrade) setChk('cWin', false, `已装 v${sys.installedVersion} 高于本包，禁止降级`);
+    else $('bannerRight').textContent = sys.upgrade ? `升级安装（当前 v${sys.installedVersion}）` : '重装 / 修复';
+  }
+  // WebView2 缺失 → 一键安装按钮
+  if (!sys.webview2){
+    const b = document.createElement('button'); b.className='btn-min'; b.textContent='一键安装';
+    b.onclick = async ()=>{
+      b.disabled=true; b.textContent='下载中…';
+      try { await invoke('webview2_install'); await runChecks(); refreshNav(); }
+      catch(e){ b.textContent='失败，重试'; b.disabled=false; }
+    };
+    $('cWv2').appendChild(b);
+  }
+  refreshNav();
+}
+function setChk(id, ok, txt){
+  const dot = $(id).querySelector('.dot');
+  dot.className = 'dot ' + (ok ? 'ok' : 'bad');
+  $(id).querySelector('.rs').textContent = txt;
+  if (ok) delete $(id).dataset.bad; else $(id).dataset.bad = '1';
+}
+
+// ---------- 许可 ----------
+$('licText').innerHTML = '<b>WinEnv管家 许可协议（摘要）</b><br><br>1. 本软件仅供个人与商业环境免费使用。<br>2. 修改系统环境变量属于高风险操作，由此产生的配置变更由使用者自行承担。<br>3. 软件不收集、不上传任何用户数据；全部配置保存在本地。<br>4. 本软件按「现状」提供，作者不对任何直接或间接损失承担责任。<br>5. 安装即表示你已阅读并同意本协议全部条款。';
+
+// ---------- 路径校验 ----------
+function validatePaths(silent){
+  const app = $('inApp').value.trim();
+  const ud = $('inData').value.trim();
+  let ok = true, msg = '';
+  const bad = s => /^[<>:"|?*\x00-\x1f]+$/.test(s.replace(/^[A-Za-z]:\\/, '').replace(/[\\/:]/g,''));
+  const ha=$('hintApp'), hd=$('hintData'), hb=$('hintBoth');
+  ha.className='hint';hd.className='hint';hb.className='hint';
+  if (!/^[A-Za-z]:\\.+/.test(app)){ ha.textContent='请输入有效的程序目录（如 C:\\Program Files\\WinEnvManager）'; ha.classList.add('bad'); ok=false; }
+  else if (bad(app)){ ha.textContent='程序目录包含非法字符'; ha.classList.add('bad'); ok=false; }
+  else ha.textContent='';
+  if (!/^[A-Za-z]:\\.+/.test(ud)){ hd.textContent='请输入有效的用户数据目录'; hd.classList.add('bad'); ok=false; }
+  else if (bad(ud)){ hd.textContent='用户数据目录包含非法字符'; hd.classList.add('bad'); ok=false; }
+  else hd.textContent='';
+  if (ok && app.toLowerCase()===ud.toLowerCase()){
+    hb.textContent='⚠ 程序目录与用户数据目录不能相同'; hb.classList.add('bad'); ok=false;
+  }
+  const sysDir = /\\windows(\\|$)/i.test(app) || /\\windows(\\|$)/i.test(ud);
+  if (ok && sysDir){
+    hb.textContent='⚠ 不能安装到 Windows 系统目录'; hb.classList.add('bad'); ok=false;
+  }
+  const rootOnly = /^[A-Za-z]:\\?$/.test(app) || /^[A-Za-z]:\\?$/.test(ud);
+  if (ok && rootOnly){
+    hb.textContent='⚠ 请指定具体文件夹，不要直接使用盘符根目录'; hb.classList.add('bad'); ok=false;
+  }
+  if (ok && ud.startsWith('C:\\') && !silent) { hb.textContent='💡 用户数据目录位于 C 盘，建议放置非系统盘（不阻断安装）'; hb.classList.add('warn'); }
+  if (ok) hb.classList.add('ok');
+  return { ok, app, ud };
+}
+['inApp','inData'].forEach(id=>$(id).addEventListener('input', ()=>{ refreshNav(); showFree(); }));
+async function showFree(){
+  for (const [input, hint] of [['inApp','freeApp'],['inData','freeData']]){
+    const v = $(input).value.trim();
+    if (!/^[A-Za-z]:\\/.test(v)){ $(hint).textContent=''; continue; }
+    try {
+      const [free] = await invoke('disk_free', { path: v });
+      const gb = (free/1024/1024/1024).toFixed(1);
+      $(hint).className = 'hint ' + (free > 500*1024*1024 ? 'ok' : 'bad');
+      $(hint).textContent = v.slice(0,2).toUpperCase() + ' 可用 ' + gb + ' GB' + (free > 500*1024*1024 ? '' : '，空间不足');
+    } catch(e){ $(hint).textContent=''; }
+  }
+}
+
+// 浏览
+document.querySelectorAll('[data-copy]').forEach(b=>{
+  b.addEventListener('click', async ()=>{
+    const t = $(b.dataset.copy).value;
+    try { await navigator.clipboard.writeText(t); }
+    catch(e){ const ta=document.createElement('textarea'); ta.value=t; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); }
+    b.textContent = '已复制';
+    setTimeout(()=>b.textContent='复制', 900);
+  });
+});
+document.querySelectorAll('.btn-browse[data-for]').forEach(b=>{
+  b.addEventListener('click', async ()=>{
+    const r = await window.__TAURI__.dialog.open({ directory:true, multiple:false });
+    if (typeof r === 'string') $(b.dataset.for).value = r;
+    refreshNav();
+  });
+});
+
+// ---------- 汇总 ----------
+function fillSummary(){
+  const v = validatePaths(true);
+  const c = id => $(id).classList.contains('sel');
+  const comp = ['主程序', c('cbTemplates')&&'规则模板', c('cbCli')&&'命令行工具', c('cbReadme')&&'自述文档'].filter(Boolean).join('、');
+  const rows = [
+    ['📦 程序本体目录', v.app],
+    ['📂 用户数据目录', v.ud],
+    ['📋 已选组件', comp],
+    ['🖥️ 桌面快捷方式', c('cbDesktop')?'启用':'关闭'],
+    ['📋 开始菜单快捷方式', c('cbStartmenu')?'启用':'关闭'],
+    ['🔗 文件关联 (.winenv-setting)', c('cbAssoc')?'启用':'关闭'],
+    ['🖱️ 右键扫描菜单', c('cbShellctx')?'启用':'关闭'],
+    ['🚀 wenv 加入系统 PATH', c('cbAddpath')?'启用':'关闭'],
+    ['⏰ 开机自启', c('cbAutostart')?'启用':'关闭'],
+    ['📝 安装日志', c('cbLog')?'启用':'关闭'],
+  ];
+  $('sumBox').innerHTML = rows.map(r=>`<div class="sum-item"><div class="k">${r[0]}</div><div>${r[1]}</div></div>`).join('');
+  const mb = 48 + (c('cbTemplates')?2:0) + (c('cbCli')?1:0) + (c('cbReadme')?1:0);
+  $('estSize').textContent = '预计占用约 ' + mb + ' MB（不含用户数据）';
+  // 旧数据迁移提示
+  if (sys && sys.userDataRoot && sys.userDataRoot.toLowerCase() !== v.ud.toLowerCase()){
+    $('migRow').style.display='';
+    $('migDesc').textContent = `检测到旧数据：${sys.userDataRoot}`;
+  } else $('migRow').style.display='none';
+}
+
+// ---------- 安装 ----------
+async function startInstall(){
+  installing = true;
+  const v = validatePaths(true);
+  const c = id => $(id).classList.contains('sel');
+  const components = ['main'];
+  if (c('cbTemplates')) components.push('templates');
+  if (c('cbCli')) components.push('cli');
+  if (c('cbReadme')) components.push('readme');
+  const tasks = [];
+  if (c('cbDesktop')) tasks.push('desktopicon');
+  if (c('cbStartmenu')) tasks.push('startmenu');
+  if (c('cbAssoc')) tasks.push('assoc');
+  if (c('cbShellctx')) tasks.push('shellctx');
+  if (c('cbAddpath')) tasks.push('addpath');
+  if (c('cbAutostart')) tasks.push('autostart');
+  lastPhase = 'installing';
+  const progTimer = setInterval(async ()=>{
+    if (lastPhase!=='installing'){ clearInterval(progTimer); return; }
+    try {
+      const [pct, stat] = await invoke('read_progress');
+      $('progFill').style.width = pct+'%';
+      $('progPct').textContent = pct+'%';
+      $('progStat').textContent = stat || '正在准备…';
+      const s = $('progStat').textContent;
+      const mark = (id, on, ok) => { $(id).className = 'st' + (ok ? ' ok' : on ? ' on' : ''); };
+      mark('st1', true, pct >= 8);
+      mark('st2', /复制|文件/.test(s), pct >= 40);
+      mark('st3', /配置|注册/.test(s), pct >= 90);
+      mark('st4', false, pct >= 100);
+    } catch(e){}
+  }, 400);
+  window.__progTimer = progTimer;
+  window.__mig = { src: sys.userDataRoot, dst: v.ud, do: c('cbMigrate') };
+  try {
+    await invoke('run_install', { opts: {
+      appDir: v.app, userData: v.ud, components, tasks,
+      enableLog: c('cbLog')
+    }});
+  } catch(e){ $('progErr').textContent = e; }
+}
+
+async function onPhase(ph){
+  lastPhase = ph;
+  if (ph==='done'){
+    if (window.__progTimer) clearInterval(window.__progTimer);
+    // 迁移
+    if (window.__mig && window.__mig.do && window.__mig.src){
+      try { await invoke('migrate_data', { src:window.__mig.src, dst:window.__mig.dst, deleteOld:false }); } catch(e){}
+    }
+    installing=false;
+    $('progFill').style.width = '100%';
+    $('progPct').textContent = '100%';
+    $('progStat').textContent = '安装完成';
+    $('doneHint').textContent = '已安装到 ' + $('inApp').value;
+    show(9);
+  }
+  if (ph==='failed'){
+    if (window.__progTimer) clearInterval(window.__progTimer);
+    installing=false;
+    $('progErr').textContent = '安装未完成。可查看日志后返回重试，已写入的文件会在重装时覆盖。';
+    $('failActs').style.display = 'flex';
+    $('btnCancel').textContent = '关闭向导';
+  }
+}
+$('btnRetry').addEventListener('click', ()=>{
+  $('failActs').style.display = 'none';
+  $('progErr').textContent = '';
+  $('progFill').style.width = '0%';
+  $('progPct').textContent = '0%';
+  show(7);
+});
+$('btnLog').addEventListener('click', async ()=>{
+  const text = await invoke('install_log');
+  const w = window.open('', 'install-log');
+  if (w){
+    w.document.title = '安装日志';
+    const dark = document.documentElement.getAttribute('data-theme')==='dark';
+    w.document.body.style.cssText = 'font:13px Consolas,monospace;white-space:pre-wrap;padding:16px;background:'+(dark?'#111':'#f7f8fb')+';color:'+(dark?'#ddd':'#1b2436');
+    w.document.body.textContent = text.slice(-8000);
+  }
+});
+
+$('btnCancel').addEventListener('click', async ()=>{
+  if (installing){ invoke('cancel_install'); installing=false; }
+  await invoke('quit_app');
+});
+
+// ---------- 完成 ----------
+async function finish(){
+  const c = id => $(id).classList.contains('sel');
+  if (c('cbRun')) invoke('launch_app');
+  if (c('cbOpenData')) invoke('open_path', { path: $('inData').value });
+  if (c('cbDoc')) invoke('open_path', { path: $('inApp').value + '\\resources\\readme' });
+  await invoke('quit_app');
+}
+
+// ---------- 卸载 ----------
+async function startUninstall(){
+  uninstalling = true;
+  show(-1); // 显示卸载进度页
+  document.querySelectorAll('.page').forEach(e=>e.classList.remove('active'));
+  $('ug1').classList.add('active');
+  $('bannerRight').textContent = '卸载向导';
+  $('unStat').textContent='正在卸载…';
+  let pct=10;
+  const t = setInterval(()=>{ pct=Math.min(pct+6,90); $('unFill').style.width=pct+'%'; $('unPct').textContent=pct+'%'; },400);
+  try {
+    await invoke('run_uninstall', {
+      deleteData: $('cbDelData').classList.contains('sel'),
+      userDataDir: sys ? sys.userDataRoot : null
+    });
+    clearInterval(t); $('unFill').style.width='100%'; $('unPct').textContent='100%';
+    setTimeout(()=>{
+      document.querySelectorAll('.page').forEach(e=>e.classList.remove('active'));
+      $('ug2').classList.add('active');
+      $('unDoneMsg').textContent = $('cbDelData').classList.contains('sel') ? '程序本体与全部用户数据已清除。' : '程序本体已清除，用户数据已保留（重装可继续使用）。';
+      uninstalling=false;
+      setTimeout(()=>invoke('quit_app'), 1600);
+    }, 500);
+  } catch(e){
+    clearInterval(t);
+    $('unErr').textContent = e;
+    uninstalling=false;
+  }
+}
+
+// ---------- 导航 ----------
+$('btnBack').addEventListener('click', ()=>{ if(page>0 && !installing) show(page-1); });
+$('btnNext').addEventListener('click', async ()=>{
+  if (installing || uninstalling) return;
+  if (page===6) fillSummary();
+  if (page===7){ fillSummary(); show(8); startInstall(); return; }
+  if (page===9){ finish(); return; }
+  if (page===0){ show(1); runChecks(); return; }
+  show(page+1);
+  if (page===5) showFree();
+});
+$('btnQuit').addEventListener('click', ()=>invoke('quit_app'));
+refreshNav();
+document.querySelectorAll('.btn-browse');
+window.addEventListener('keydown', e=>{ if(e.key==='Enter' && !$('btnNext').disabled && !installing) $('btnNext').click(); });
+
+function applyPreset(name){
+  const all = ['cbTemplates','cbCli','cbDesktop','cbStartmenu','cbShellctx','cbAddpath','cbReadme','cbAssoc','cbUninstReg','cbAutostart'];
+  const sets = {
+    full: all,
+    rec: ['cbTemplates','cbCli','cbDesktop','cbStartmenu','cbReadme','cbAssoc','cbUninstReg'],
+    min: ['cbReadme','cbUninstReg']
+  };
+  all.forEach(id => $(id).classList.remove('sel'));
+  (sets[name]||[]).forEach(id => $(id).classList.add('sel'));
+  document.querySelectorAll('.presets button').forEach(b => b.classList.remove('on'));
+  $('pre'+name[0].toUpperCase()+name.slice(1)).classList.add('on');
+  refreshNav();
+}
+$('preFull').onclick = () => applyPreset('full');
+$('preRec').onclick = () => applyPreset('rec');
+$('preMin').onclick = () => applyPreset('min');
+
+async function enterUninstall(){
+  window.__uninstallMode = true;
+  try { sys = sys || await invoke('sys_info'); } catch(e){}
+  $('unVer').textContent = '检测到已安装版本：' + ((sys && sys.installedVersion) || '未知');
+  const app = (sys && sys.installedPath) || '程序目录';
+  const ud = (sys && sys.userDataRoot) || '用户数据目录';
+  $('unList').innerHTML = [
+    ['将删除', app + '、开始菜单与桌面快捷方式、文件关联、卸载项'],
+    ['默认保留', ud + '（主题、规则、快照、导出）']
+  ].map(r => `<div class="sum-item"><div class="k">${r[0]}</div><div>${r[1]}</div></div>`).join('');
+  document.querySelectorAll('.page').forEach(e=>e.classList.remove('active'));
+  $('ug0').classList.add('active');
+  $('bannerRight').textContent = '卸载向导';
+  $('btnNext').textContent = '立即卸载';
+  $('btnNext').disabled = false;
+  $('btnNext').style.display = '';
+  $('btnBack').style.display = 'none';
+  $('pageDots').innerHTML = '';
+  page = -1;
+}
+window.enterUninstall = enterUninstall;
+function showInstalled(s){
+  if (!s || !s.installedVersion) return;
+  $('installedCard').style.display = '';
+  $('instVer').textContent = 'v' + s.installedVersion;
+  $('instPath').textContent = s.installedPath || '';
+  $('bannerRight').textContent = s.upgrade ? '升级安装' : '重装 / 修复';
+}
+$('btnRepair').addEventListener('click', ()=>{
+  show(8);
+  $('inApp').value = (sys && sys.installedPath) || $('inApp').value;
+  startInstall();
+});
+$('btnReconfigure').addEventListener('click', ()=>{ show(1); runChecks(); });
+$('btnGoUninstall').addEventListener('click', ()=>enterUninstall());
+
+// 检查是否以卸载模式启动（卸载参数由引导壳注册表/开始菜单入口传入）
+(async function init(){
+  const params = new URLSearchParams(location.search);
+  // 默认路径
+  $('inApp').value = 'C:\\Program Files\\WinEnvManager';
+  try {
+    const t = await invoke('disk_free', {path:'C:\\'});
+  } catch(e){}
+  // 预填旧安装路径
+  try {
+    const s = await invoke('sys_info');
+    sys = s;
+    if (s.installedPath) $('inApp').value = s.installedPath;
+    showInstalled(s);
+    if (s.userDataRoot) $('inData').value = s.userDataRoot;
+    else $('inData').value = s.defaultUserData || 'C:\\Users\\Administrator\\AppData\\Local\\WinEnvManager';
+    if (window.__uninstallMode){ await enterUninstall(); return; }
+  } catch(e){}
+  if (window.__TAURI__ && window.__TAURI__.event){
+    window.__TAURI__.event.listen('phase', e => onPhase(e.payload));
+  }
+  if (window.__uninstallMode) return;
+})();
+// 卸载模式下 Next 触发
+document.addEventListener('click', e=>{
+  if (window.__uninstallMode && e.target.id==='btnNext'){ $('btnNext').disabled=true; startUninstall(); }
+});
+</script>
+</body>
+</html>

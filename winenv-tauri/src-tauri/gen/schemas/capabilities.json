@@ -1,0 +1,1 @@
+{"default":{"identifier":"default","description":"WinEnv管家 主窗口默认权限","local":true,"windows":["main"],"permissions":["core:default","core:event:allow-listen","core:event:allow-unlisten","core:event:allow-emit","core:event:allow-emit-to","dialog:default","fs:default","opener:default","process:default","store:default"]}}

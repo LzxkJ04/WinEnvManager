@@ -1,0 +1,1588 @@
+{
+  "ruleVersion": "1.0",
+  "ruleList": [
+    {
+      "id": "jdk-1438461",
+      "name": "JDK",
+      "alias": [
+        "java",
+        "jdk",
+        "openjdk",
+        "corretto"
+      ],
+      "category": "编程语言运行时",
+      "enable": true,
+      "description": "JDK 运行时，自动生成 JAVA_HOME 并把 bin 加入 PATH",
+      "scanSource": [
+        "registry",
+        "path-scan",
+        "customDir"
+      ],
+      "executableName": "java.exe",
+      "versionCmd": "-version",
+      "versionRegex": "version \"(\\d+(?:\\.\\d+)?[^\"]*)\"",
+      "installPathExtract": {
+        "mode": "parentNLevel",
+        "level": 1
+      },
+      "envTemplate": [
+        {
+          "varKey": "JAVA_HOME",
+          "varValue": "{{installPath}}",
+          "scope": "user",
+          "remark": "JDK 主目录",
+          "pathPosition": ""
+        },
+        {
+          "varKey": "PATH",
+          "varValue": "{{installPath}}\\bin",
+          "scope": "user",
+          "remark": "JDK bin 目录",
+          "pathPosition": "prepend"
+        }
+      ],
+      "dependRuleIds": [],
+      "ignoreIfExists": false,
+      "customCheckScript": "",
+      "tags": [
+        "java",
+        "jdk"
+      ],
+      "builtin": true
+    },
+    {
+      "id": "node-a29a512",
+      "name": "Node.js",
+      "alias": [
+        "node",
+        "nodejs"
+      ],
+      "category": "编程语言运行时",
+      "enable": true,
+      "description": "Node.js 运行时，生成 NODE_HOME 并加入 PATH",
+      "scanSource": [
+        "registry",
+        "path-scan",
+        "customDir"
+      ],
+      "executableName": "node.exe",
+      "versionCmd": "--version",
+      "versionRegex": "v(\\d+\\.\\d+\\.\\d+)",
+      "installPathExtract": {
+        "mode": "self",
+        "level": 0
+      },
+      "envTemplate": [
+        {
+          "varKey": "NODE_HOME",
+          "varValue": "{{installPath}}",
+          "scope": "user",
+          "remark": "Node.js 主目录",
+          "pathPosition": ""
+        },
+        {
+          "varKey": "PATH",
+          "varValue": "{{installPath}}",
+          "scope": "user",
+          "remark": "Node.js 主目录",
+          "pathPosition": "append"
+        }
+      ],
+      "dependRuleIds": [],
+      "ignoreIfExists": false,
+      "customCheckScript": "",
+      "tags": [
+        "node",
+        "javascript"
+      ],
+      "builtin": true
+    },
+    {
+      "id": "python-3aab073",
+      "name": "Python",
+      "alias": [
+        "python",
+        "python3",
+        "anaconda",
+        "miniconda"
+      ],
+      "category": "编程语言运行时",
+      "enable": true,
+      "description": "Python 解释器，生成 PYTHON_HOME / PYTHONPATH 并加入 PATH 与 Scripts",
+      "scanSource": [
+        "registry",
+        "path-scan",
+        "customDir"
+      ],
+      "executableName": "python.exe",
+      "versionCmd": "--version",
+      "versionRegex": "Python (\\d+\\.\\d+\\.\\d+)",
+      "installPathExtract": {
+        "mode": "self",
+        "level": 0
+      },
+      "envTemplate": [
+        {
+          "varKey": "PYTHON_HOME",
+          "varValue": "{{installPath}}",
+          "scope": "user",
+          "remark": "Python 主目录",
+          "pathPosition": ""
+        },
+        {
+          "varKey": "PYTHONPATH",
+          "varValue": "{{installPath}};{{installPath}}\\Lib",
+          "scope": "user",
+          "remark": "Python 模块搜索路径",
+          "pathPosition": ""
+        },
+        {
+          "varKey": "PATH",
+          "varValue": "{{installPath}}",
+          "scope": "user",
+          "remark": "Python 主目录",
+          "pathPosition": "append"
+        },
+        {
+          "varKey": "PATH",
+          "varValue": "{{installPath}}\\Scripts",
+          "scope": "user",
+          "remark": "Python Scripts 目录",
+          "pathPosition": "append"
+        }
+      ],
+      "dependRuleIds": [],
+      "ignoreIfExists": false,
+      "customCheckScript": "",
+      "tags": [
+        "python"
+      ],
+      "builtin": true
+    },
+    {
+      "id": "go-99c8484",
+      "name": "Go",
+      "alias": [
+        "go",
+        "golang"
+      ],
+      "category": "编程语言运行时",
+      "enable": true,
+      "description": "Go 工具链，生成 GOROOT / GOPATH / GOBIN",
+      "scanSource": [
+        "registry",
+        "path-scan",
+        "customDir"
+      ],
+      "executableName": "go.exe",
+      "versionCmd": "version",
+      "versionRegex": "go(\\d+\\.\\d+[\\d.]*)",
+      "installPathExtract": {
+        "mode": "self",
+        "level": 0
+      },
+      "envTemplate": [
+        {
+          "varKey": "GOROOT",
+          "varValue": "{{installPath}}",
+          "scope": "user",
+          "remark": "Go 安装目录",
+          "pathPosition": ""
+        },
+        {
+          "varKey": "GOPATH",
+          "varValue": "%USERPROFILE%\\go",
+          "scope": "user",
+          "remark": "Go 工作区",
+          "pathPosition": ""
+        },
+        {
+          "varKey": "GOBIN",
+          "varValue": "%USERPROFILE%\\go\\bin",
+          "scope": "user",
+          "remark": "Go 可执行文件目录",
+          "pathPosition": ""
+        },
+        {
+          "varKey": "PATH",
+          "varValue": "{{installPath}}\\bin",
+          "scope": "user",
+          "remark": "Go 工具链",
+          "pathPosition": "append"
+        }
+      ],
+      "dependRuleIds": [],
+      "ignoreIfExists": false,
+      "customCheckScript": "",
+      "tags": [
+        "go",
+        "golang"
+      ],
+      "builtin": true
+    },
+    {
+      "id": "rust-539b7e5",
+      "name": "Rust",
+      "alias": [
+        "rust",
+        "cargo",
+        "rustup"
+      ],
+      "category": "编程语言运行时",
+      "enable": true,
+      "description": "Rust 工具链，生成 CARGO_HOME / RUSTUP_HOME",
+      "scanSource": [
+        "registry",
+        "path-scan",
+        "customDir"
+      ],
+      "executableName": "cargo.exe",
+      "versionCmd": "--version",
+      "versionRegex": "cargo (\\d+\\.\\d+[\\d.]*)",
+      "installPathExtract": {
+        "mode": "parentNLevel",
+        "level": 1
+      },
+      "envTemplate": [
+        {
+          "varKey": "CARGO_HOME",
+          "varValue": "{{installPath}}",
+          "scope": "user",
+          "remark": "Cargo 主目录",
+          "pathPosition": ""
+        },
+        {
+          "varKey": "RUSTUP_HOME",
+          "varValue": "{{installPath}}\\..\\rustup",
+          "scope": "user",
+          "remark": "Rustup 主目录",
+          "pathPosition": ""
+        },
+        {
+          "varKey": "PATH",
+          "varValue": "{{installPath}}\\bin",
+          "scope": "user",
+          "remark": "Cargo bin 目录",
+          "pathPosition": "append"
+        }
+      ],
+      "dependRuleIds": [],
+      "ignoreIfExists": false,
+      "customCheckScript": "",
+      "tags": [
+        "rust"
+      ],
+      "builtin": true
+    },
+    {
+      "id": "php-2719986",
+      "name": "PHP",
+      "alias": [
+        "php"
+      ],
+      "category": "编程语言运行时",
+      "enable": true,
+      "description": "",
+      "scanSource": [
+        "registry",
+        "path-scan",
+        "customDir"
+      ],
+      "executableName": "php.exe",
+      "versionCmd": "--version",
+      "versionRegex": "PHP (\\d+\\.\\d+[\\d.]*)",
+      "installPathExtract": {
+        "mode": "self",
+        "level": 0
+      },
+      "envTemplate": [
+        {
+          "varKey": "PHP_HOME",
+          "varValue": "{{installPath}}",
+          "scope": "user",
+          "remark": "PHP 主目录",
+          "pathPosition": ""
+        },
+        {
+          "varKey": "PATH",
+          "varValue": "{{installPath}}",
+          "scope": "user",
+          "remark": "PHP 主目录",
+          "pathPosition": "append"
+        }
+      ],
+      "dependRuleIds": [],
+      "ignoreIfExists": false,
+      "customCheckScript": "",
+      "tags": [
+        "php"
+      ],
+      "builtin": true
+    },
+    {
+      "id": "ruby-4ce29b7",
+      "name": "Ruby",
+      "alias": [
+        "ruby"
+      ],
+      "category": "编程语言运行时",
+      "enable": true,
+      "description": "",
+      "scanSource": [
+        "registry",
+        "path-scan",
+        "customDir"
+      ],
+      "executableName": "ruby.exe",
+      "versionCmd": "--version",
+      "versionRegex": "ruby (\\d+\\.\\d+\\.\\d+)",
+      "installPathExtract": {
+        "mode": "parentNLevel",
+        "level": 1
+      },
+      "envTemplate": [
+        {
+          "varKey": "PATH",
+          "varValue": "{{installPath}}\\bin",
+          "scope": "user",
+          "remark": "Ruby bin 目录",
+          "pathPosition": "append"
+        }
+      ],
+      "dependRuleIds": [],
+      "ignoreIfExists": false,
+      "customCheckScript": "",
+      "tags": [
+        "ruby"
+      ],
+      "builtin": true
+    },
+    {
+      "id": "dotnet-977d6d8",
+      "name": ".NET SDK",
+      "alias": [
+        "dotnet",
+        "dotnet-sdk"
+      ],
+      "category": "编程语言运行时",
+      "enable": true,
+      "description": "",
+      "scanSource": [
+        "registry",
+        "path-scan",
+        "customDir"
+      ],
+      "executableName": "dotnet.exe",
+      "versionCmd": "--version",
+      "versionRegex": "(\\d+\\.\\d+\\.\\d+)",
+      "installPathExtract": {
+        "mode": "parentNLevel",
+        "level": 1
+      },
+      "envTemplate": [
+        {
+          "varKey": "DOTNET_ROOT",
+          "varValue": "{{installPath}}",
+          "scope": "user",
+          "remark": ".NET 主目录",
+          "pathPosition": ""
+        },
+        {
+          "varKey": "PATH",
+          "varValue": "{{installPath}}",
+          "scope": "user",
+          "remark": ".NET 主目录",
+          "pathPosition": "append"
+        }
+      ],
+      "dependRuleIds": [],
+      "ignoreIfExists": false,
+      "customCheckScript": "",
+      "tags": [
+        "dotnet",
+        "csharp"
+      ],
+      "builtin": true
+    },
+    {
+      "id": "maven-bc51009",
+      "name": "Maven",
+      "alias": [
+        "maven",
+        "mvn"
+      ],
+      "category": "构建&包管理工具",
+      "enable": true,
+      "description": "",
+      "scanSource": [
+        "registry",
+        "path-scan",
+        "customDir"
+      ],
+      "executableName": "mvn.cmd",
+      "versionCmd": "--version",
+      "versionRegex": "Apache Maven (\\d+\\.\\d+[\\d.]*)",
+      "installPathExtract": {
+        "mode": "self",
+        "level": 0
+      },
+      "envTemplate": [
+        {
+          "varKey": "MAVEN_HOME",
+          "varValue": "{{installPath}}",
+          "scope": "user",
+          "remark": "Maven 主目录",
+          "pathPosition": ""
+        },
+        {
+          "varKey": "MAVEN_OPTS",
+          "varValue": "-Xms128m -Xmx512m",
+          "scope": "user",
+          "remark": "Maven JVM 参数",
+          "pathPosition": ""
+        },
+        {
+          "varKey": "PATH",
+          "varValue": "{{installPath}}\\bin",
+          "scope": "user",
+          "remark": "Maven bin 目录",
+          "pathPosition": "append"
+        }
+      ],
+      "dependRuleIds": [
+        "jdk"
+      ],
+      "ignoreIfExists": false,
+      "customCheckScript": "",
+      "tags": [
+        "maven",
+        "java"
+      ],
+      "builtin": true
+    },
+    {
+      "id": "gradle-39a39310",
+      "name": "Gradle",
+      "alias": [
+        "gradle"
+      ],
+      "category": "构建&包管理工具",
+      "enable": true,
+      "description": "",
+      "scanSource": [
+        "registry",
+        "path-scan",
+        "customDir"
+      ],
+      "executableName": "gradle.bat",
+      "versionCmd": "--version",
+      "versionRegex": "Gradle (\\d+\\.\\d+[\\d.]*)",
+      "installPathExtract": {
+        "mode": "self",
+        "level": 0
+      },
+      "envTemplate": [
+        {
+          "varKey": "GRADLE_HOME",
+          "varValue": "{{installPath}}",
+          "scope": "user",
+          "remark": "Gradle 主目录",
+          "pathPosition": ""
+        },
+        {
+          "varKey": "PATH",
+          "varValue": "{{installPath}}\\bin",
+          "scope": "user",
+          "remark": "Gradle bin 目录",
+          "pathPosition": "append"
+        }
+      ],
+      "dependRuleIds": [
+        "jdk"
+      ],
+      "ignoreIfExists": false,
+      "customCheckScript": "",
+      "tags": [
+        "gradle"
+      ],
+      "builtin": true
+    },
+    {
+      "id": "git-86750111",
+      "name": "Git",
+      "alias": [
+        "git",
+        "git-for-windows"
+      ],
+      "category": "构建&包管理工具",
+      "enable": true,
+      "description": "",
+      "scanSource": [
+        "registry",
+        "path-scan",
+        "customDir"
+      ],
+      "executableName": "git.exe",
+      "versionCmd": "--version",
+      "versionRegex": "git version (\\d+\\.\\d+[\\d.]*)",
+      "installPathExtract": {
+        "mode": "parentNLevel",
+        "level": 1
+      },
+      "envTemplate": [
+        {
+          "varKey": "PATH",
+          "varValue": "{{installPath}}\\cmd",
+          "scope": "user",
+          "remark": "Git cmd 目录",
+          "pathPosition": "append"
+        }
+      ],
+      "dependRuleIds": [],
+      "ignoreIfExists": false,
+      "customCheckScript": "",
+      "tags": [
+        "git"
+      ],
+      "builtin": true
+    },
+    {
+      "id": "cmake-a9edfd12",
+      "name": "CMake",
+      "alias": [
+        "cmake"
+      ],
+      "category": "构建&包管理工具",
+      "enable": true,
+      "description": "",
+      "scanSource": [
+        "registry",
+        "path-scan",
+        "customDir"
+      ],
+      "executableName": "cmake.exe",
+      "versionCmd": "--version",
+      "versionRegex": "cmake version (\\d+\\.\\d+[\\d.]*)",
+      "installPathExtract": {
+        "mode": "parentNLevel",
+        "level": 1
+      },
+      "envTemplate": [
+        {
+          "varKey": "PATH",
+          "varValue": "{{installPath}}\\bin",
+          "scope": "user",
+          "remark": "CMake bin 目录",
+          "pathPosition": "append"
+        }
+      ],
+      "dependRuleIds": [],
+      "ignoreIfExists": false,
+      "customCheckScript": "",
+      "tags": [
+        "cmake"
+      ],
+      "builtin": true
+    },
+    {
+      "id": "mingw-a4276813",
+      "name": "MinGW-w64",
+      "alias": [
+        "mingw",
+        "gcc",
+        "g++"
+      ],
+      "category": "构建&包管理工具",
+      "enable": true,
+      "description": "",
+      "scanSource": [
+        "registry",
+        "path-scan",
+        "customDir"
+      ],
+      "executableName": "gcc.exe",
+      "versionCmd": "--version",
+      "versionRegex": "gcc[^(]*\\(\\w+\\)\\s+(\\d+\\.\\d+[\\d.]*)",
+      "installPathExtract": {
+        "mode": "parentNLevel",
+        "level": 1
+      },
+      "envTemplate": [
+        {
+          "varKey": "PATH",
+          "varValue": "{{installPath}}\\bin",
+          "scope": "user",
+          "remark": "MinGW bin 目录",
+          "pathPosition": "append"
+        }
+      ],
+      "dependRuleIds": [],
+      "ignoreIfExists": false,
+      "customCheckScript": "",
+      "tags": [
+        "gcc",
+        "c",
+        "cpp"
+      ],
+      "builtin": true
+    },
+    {
+      "id": "ninja-778b2d14",
+      "name": "Ninja",
+      "alias": [
+        "ninja"
+      ],
+      "category": "构建&包管理工具",
+      "enable": true,
+      "description": "",
+      "scanSource": [
+        "registry",
+        "path-scan",
+        "customDir"
+      ],
+      "executableName": "ninja.exe",
+      "versionCmd": "--version",
+      "versionRegex": "(\\d+\\.\\d+\\.\\d+)",
+      "installPathExtract": {
+        "mode": "self",
+        "level": 0
+      },
+      "envTemplate": [
+        {
+          "varKey": "PATH",
+          "varValue": "{{installPath}}",
+          "scope": "user",
+          "remark": "Ninja 目录",
+          "pathPosition": "append"
+        }
+      ],
+      "dependRuleIds": [],
+      "ignoreIfExists": false,
+      "customCheckScript": "",
+      "tags": [
+        "ninja"
+      ],
+      "builtin": true
+    },
+    {
+      "id": "ant-f16b2415",
+      "name": "Apache Ant",
+      "alias": [
+        "ant"
+      ],
+      "category": "构建&包管理工具",
+      "enable": true,
+      "description": "",
+      "scanSource": [
+        "registry",
+        "path-scan",
+        "customDir"
+      ],
+      "executableName": "ant.bat",
+      "versionCmd": "-version",
+      "versionRegex": "Apache Ant\\(TM\\) version (\\d+\\.\\d+[\\d.]*)",
+      "installPathExtract": {
+        "mode": "self",
+        "level": 0
+      },
+      "envTemplate": [
+        {
+          "varKey": "ANT_HOME",
+          "varValue": "{{installPath}}",
+          "scope": "user",
+          "remark": "Ant 主目录",
+          "pathPosition": ""
+        },
+        {
+          "varKey": "PATH",
+          "varValue": "{{installPath}}\\bin",
+          "scope": "user",
+          "remark": "Ant bin 目录",
+          "pathPosition": "append"
+        }
+      ],
+      "dependRuleIds": [],
+      "ignoreIfExists": false,
+      "customCheckScript": "",
+      "tags": [
+        "ant"
+      ],
+      "builtin": true
+    },
+    {
+      "id": "mysql-5d699716",
+      "name": "MySQL",
+      "alias": [
+        "mysql",
+        "mariadb"
+      ],
+      "category": "数据库 & 中间件",
+      "enable": true,
+      "description": "",
+      "scanSource": [
+        "registry",
+        "path-scan",
+        "customDir"
+      ],
+      "executableName": "mysql.exe",
+      "versionCmd": "--version",
+      "versionRegex": "Ver\\s+(\\d+\\.\\d+[\\d.]*)",
+      "installPathExtract": {
+        "mode": "parentNLevel",
+        "level": 1
+      },
+      "envTemplate": [
+        {
+          "varKey": "MYSQL_HOME",
+          "varValue": "{{installPath}}",
+          "scope": "user",
+          "remark": "MySQL 主目录",
+          "pathPosition": ""
+        },
+        {
+          "varKey": "PATH",
+          "varValue": "{{installPath}}\\bin",
+          "scope": "user",
+          "remark": "MySQL bin 目录",
+          "pathPosition": "append"
+        }
+      ],
+      "dependRuleIds": [],
+      "ignoreIfExists": false,
+      "customCheckScript": "",
+      "tags": [
+        "mysql",
+        "db"
+      ],
+      "builtin": true
+    },
+    {
+      "id": "postgresql-3143e817",
+      "name": "PostgreSQL",
+      "alias": [
+        "postgres",
+        "postgresql",
+        "psql"
+      ],
+      "category": "数据库 & 中间件",
+      "enable": true,
+      "description": "",
+      "scanSource": [
+        "registry",
+        "path-scan",
+        "customDir"
+      ],
+      "executableName": "psql.exe",
+      "versionCmd": "--version",
+      "versionRegex": "psql \\(PostgreSQL\\) (\\d+[\\d.]*)",
+      "installPathExtract": {
+        "mode": "parentNLevel",
+        "level": 2
+      },
+      "envTemplate": [
+        {
+          "varKey": "PGHOME",
+          "varValue": "{{installPath}}",
+          "scope": "user",
+          "remark": "PostgreSQL 主目录",
+          "pathPosition": ""
+        },
+        {
+          "varKey": "PATH",
+          "varValue": "{{installPath}}\\bin",
+          "scope": "user",
+          "remark": "PostgreSQL bin 目录",
+          "pathPosition": "append"
+        }
+      ],
+      "dependRuleIds": [],
+      "ignoreIfExists": false,
+      "customCheckScript": "",
+      "tags": [
+        "postgresql",
+        "db"
+      ],
+      "builtin": true
+    },
+    {
+      "id": "redis-f7f5b618",
+      "name": "Redis",
+      "alias": [
+        "redis",
+        "redis-server"
+      ],
+      "category": "数据库 & 中间件",
+      "enable": true,
+      "description": "",
+      "scanSource": [
+        "registry",
+        "path-scan",
+        "customDir"
+      ],
+      "executableName": "redis-server.exe",
+      "versionCmd": "--version",
+      "versionRegex": "v=(\\d+\\.\\d+[\\d.]*)",
+      "installPathExtract": {
+        "mode": "self",
+        "level": 0
+      },
+      "envTemplate": [
+        {
+          "varKey": "PATH",
+          "varValue": "{{installPath}}",
+          "scope": "user",
+          "remark": "Redis 目录",
+          "pathPosition": "append"
+        }
+      ],
+      "dependRuleIds": [],
+      "ignoreIfExists": false,
+      "customCheckScript": "",
+      "tags": [
+        "redis",
+        "db"
+      ],
+      "builtin": true
+    },
+    {
+      "id": "mongodb-b7e65519",
+      "name": "MongoDB",
+      "alias": [
+        "mongo",
+        "mongodb",
+        "mongod"
+      ],
+      "category": "数据库 & 中间件",
+      "enable": true,
+      "description": "",
+      "scanSource": [
+        "registry",
+        "path-scan",
+        "customDir"
+      ],
+      "executableName": "mongod.exe",
+      "versionCmd": "--version",
+      "versionRegex": "db version v(\\d+\\.\\d+[\\d.]*)",
+      "installPathExtract": {
+        "mode": "self",
+        "level": 0
+      },
+      "envTemplate": [
+        {
+          "varKey": "PATH",
+          "varValue": "{{installPath}}\\bin",
+          "scope": "user",
+          "remark": "MongoDB bin 目录",
+          "pathPosition": "append"
+        }
+      ],
+      "dependRuleIds": [],
+      "ignoreIfExists": false,
+      "customCheckScript": "",
+      "tags": [
+        "mongodb",
+        "db"
+      ],
+      "builtin": true
+    },
+    {
+      "id": "elasticsearch-b0024720",
+      "name": "Elasticsearch",
+      "alias": [
+        "elasticsearch",
+        "es"
+      ],
+      "category": "数据库 & 中间件",
+      "enable": true,
+      "description": "",
+      "scanSource": [
+        "registry",
+        "path-scan",
+        "customDir"
+      ],
+      "executableName": "elasticsearch.bat",
+      "versionCmd": "--version",
+      "versionRegex": "Version:\\s+(\\d+\\.\\d+\\.\\d+)",
+      "installPathExtract": {
+        "mode": "parentNLevel",
+        "level": 1
+      },
+      "envTemplate": [
+        {
+          "varKey": "ES_HOME",
+          "varValue": "{{installPath}}",
+          "scope": "user",
+          "remark": "Elasticsearch 主目录",
+          "pathPosition": ""
+        },
+        {
+          "varKey": "PATH",
+          "varValue": "{{installPath}}\\bin",
+          "scope": "user",
+          "remark": "Elasticsearch bin 目录",
+          "pathPosition": "append"
+        }
+      ],
+      "dependRuleIds": [
+        "jdk"
+      ],
+      "ignoreIfExists": false,
+      "customCheckScript": "",
+      "tags": [
+        "elasticsearch"
+      ],
+      "builtin": true
+    },
+    {
+      "id": "kafka-1f077821",
+      "name": "Kafka",
+      "alias": [
+        "kafka"
+      ],
+      "category": "数据库 & 中间件",
+      "enable": true,
+      "description": "",
+      "scanSource": [
+        "registry",
+        "path-scan",
+        "customDir"
+      ],
+      "executableName": "kafka-server-start.bat",
+      "versionCmd": "--version",
+      "versionRegex": "(\\d+\\.\\d+[\\d.]*)",
+      "installPathExtract": {
+        "mode": "self",
+        "level": 0
+      },
+      "envTemplate": [
+        {
+          "varKey": "PATH",
+          "varValue": "{{installPath}}\\bin",
+          "scope": "user",
+          "remark": "Kafka bin 目录",
+          "pathPosition": "append"
+        }
+      ],
+      "dependRuleIds": [
+        "jdk"
+      ],
+      "ignoreIfExists": false,
+      "customCheckScript": "",
+      "tags": [
+        "kafka"
+      ],
+      "builtin": true
+    },
+    {
+      "id": "docker-2c182322",
+      "name": "Docker Desktop",
+      "alias": [
+        "docker"
+      ],
+      "category": "容器、虚拟化 & 云原生",
+      "enable": true,
+      "description": "",
+      "scanSource": [
+        "registry",
+        "path-scan",
+        "customDir"
+      ],
+      "executableName": "docker.exe",
+      "versionCmd": "--version",
+      "versionRegex": "Docker version (\\d+\\.\\d+[\\d.]*)",
+      "installPathExtract": {
+        "mode": "parentNLevel",
+        "level": 2
+      },
+      "envTemplate": [
+        {
+          "varKey": "DOCKER_HOME",
+          "varValue": "{{installPath}}",
+          "scope": "user",
+          "remark": "Docker 主目录",
+          "pathPosition": ""
+        },
+        {
+          "varKey": "PATH",
+          "varValue": "{{installPath}}\\resources\\bin",
+          "scope": "user",
+          "remark": "Docker 资源目录",
+          "pathPosition": "append"
+        }
+      ],
+      "dependRuleIds": [],
+      "ignoreIfExists": false,
+      "customCheckScript": "",
+      "tags": [
+        "docker",
+        "container"
+      ],
+      "builtin": true
+    },
+    {
+      "id": "kubectl-90040223",
+      "name": "kubectl",
+      "alias": [
+        "kubectl",
+        "k8s"
+      ],
+      "category": "容器、虚拟化 & 云原生",
+      "enable": true,
+      "description": "",
+      "scanSource": [
+        "registry",
+        "path-scan",
+        "customDir"
+      ],
+      "executableName": "kubectl.exe",
+      "versionCmd": "version --client",
+      "versionRegex": "v(\\d+\\.\\d+\\.\\d+)",
+      "installPathExtract": {
+        "mode": "self",
+        "level": 0
+      },
+      "envTemplate": [
+        {
+          "varKey": "PATH",
+          "varValue": "{{installPath}}",
+          "scope": "user",
+          "remark": "kubectl 目录",
+          "pathPosition": "append"
+        }
+      ],
+      "dependRuleIds": [],
+      "ignoreIfExists": false,
+      "customCheckScript": "",
+      "tags": [
+        "k8s",
+        "kubectl"
+      ],
+      "builtin": true
+    },
+    {
+      "id": "helm-361f2424",
+      "name": "Helm",
+      "alias": [
+        "helm"
+      ],
+      "category": "容器、虚拟化 & 云原生",
+      "enable": true,
+      "description": "",
+      "scanSource": [
+        "registry",
+        "path-scan",
+        "customDir"
+      ],
+      "executableName": "helm.exe",
+      "versionCmd": "version",
+      "versionRegex": "v(\\d+\\.\\d+\\.\\d+)",
+      "installPathExtract": {
+        "mode": "self",
+        "level": 0
+      },
+      "envTemplate": [
+        {
+          "varKey": "PATH",
+          "varValue": "{{installPath}}",
+          "scope": "user",
+          "remark": "Helm 目录",
+          "pathPosition": "append"
+        }
+      ],
+      "dependRuleIds": [],
+      "ignoreIfExists": false,
+      "customCheckScript": "",
+      "tags": [
+        "helm"
+      ],
+      "builtin": true
+    },
+    {
+      "id": "terraform-9d2a2f25",
+      "name": "Terraform",
+      "alias": [
+        "terraform"
+      ],
+      "category": "容器、虚拟化 & 云原生",
+      "enable": true,
+      "description": "",
+      "scanSource": [
+        "registry",
+        "path-scan",
+        "customDir"
+      ],
+      "executableName": "terraform.exe",
+      "versionCmd": "--version",
+      "versionRegex": "Terraform v(\\d+\\.\\d+\\.\\d+)",
+      "installPathExtract": {
+        "mode": "self",
+        "level": 0
+      },
+      "envTemplate": [
+        {
+          "varKey": "PATH",
+          "varValue": "{{installPath}}",
+          "scope": "user",
+          "remark": "Terraform 目录",
+          "pathPosition": "append"
+        }
+      ],
+      "dependRuleIds": [],
+      "ignoreIfExists": false,
+      "customCheckScript": "",
+      "tags": [
+        "terraform"
+      ],
+      "builtin": true
+    },
+    {
+      "id": "vscode-770cf326",
+      "name": "VS Code",
+      "alias": [
+        "vscode",
+        "code",
+        "visual-studio-code"
+      ],
+      "category": "IDE与工具",
+      "enable": true,
+      "description": "",
+      "scanSource": [
+        "registry",
+        "path-scan",
+        "customDir"
+      ],
+      "executableName": "Code.exe",
+      "versionCmd": "--version",
+      "versionRegex": "(\\d+\\.\\d+\\.\\d+)",
+      "installPathExtract": {
+        "mode": "self",
+        "level": 0
+      },
+      "envTemplate": [],
+      "dependRuleIds": [],
+      "ignoreIfExists": false,
+      "customCheckScript": "",
+      "tags": [
+        "vscode",
+        "ide"
+      ],
+      "builtin": true
+    },
+    {
+      "id": "android-sdk-c9636c27",
+      "name": "Android SDK",
+      "alias": [
+        "android-sdk",
+        "adb",
+        "sdkmanager"
+      ],
+      "category": "多媒体、编译、逆向",
+      "enable": true,
+      "description": "Android SDK，自动生成 ANDROID_HOME 并加入 platform-tools",
+      "scanSource": [
+        "registry",
+        "path-scan",
+        "customDir"
+      ],
+      "executableName": "adb.exe",
+      "versionCmd": "version",
+      "versionRegex": "Android Debug Bridge version (\\d+\\.\\d+\\.\\d+)",
+      "installPathExtract": {
+        "mode": "parentNLevel",
+        "level": 2
+      },
+      "envTemplate": [
+        {
+          "varKey": "ANDROID_HOME",
+          "varValue": "{{installPath}}",
+          "scope": "user",
+          "remark": "Android SDK 根目录",
+          "pathPosition": ""
+        },
+        {
+          "varKey": "PATH",
+          "varValue": "{{installPath}}\\platform-tools",
+          "scope": "user",
+          "remark": "platform-tools",
+          "pathPosition": "append"
+        },
+        {
+          "varKey": "PATH",
+          "varValue": "{{installPath}}\\tools",
+          "scope": "user",
+          "remark": "tools 目录",
+          "pathPosition": "append"
+        }
+      ],
+      "dependRuleIds": [],
+      "ignoreIfExists": false,
+      "customCheckScript": "",
+      "tags": [
+        "android"
+      ],
+      "builtin": true
+    },
+    {
+      "id": "flutter-beb87628",
+      "name": "Flutter",
+      "alias": [
+        "flutter",
+        "dart"
+      ],
+      "category": "多媒体、编译、逆向",
+      "enable": true,
+      "description": "",
+      "scanSource": [
+        "registry",
+        "path-scan",
+        "customDir"
+      ],
+      "executableName": "flutter.bat",
+      "versionCmd": "--version",
+      "versionRegex": "Flutter (\\d+\\.\\d+\\.\\d+)",
+      "installPathExtract": {
+        "mode": "self",
+        "level": 0
+      },
+      "envTemplate": [
+        {
+          "varKey": "PATH",
+          "varValue": "{{installPath}}\\bin",
+          "scope": "user",
+          "remark": "Flutter bin 目录",
+          "pathPosition": "prepend"
+        }
+      ],
+      "dependRuleIds": [],
+      "ignoreIfExists": false,
+      "customCheckScript": "",
+      "tags": [
+        "flutter",
+        "dart"
+      ],
+      "builtin": true
+    },
+    {
+      "id": "ffmpeg-de2d2829",
+      "name": "FFmpeg",
+      "alias": [
+        "ffmpeg",
+        "ffprobe"
+      ],
+      "category": "多媒体、编译、逆向",
+      "enable": true,
+      "description": "",
+      "scanSource": [
+        "registry",
+        "path-scan",
+        "customDir"
+      ],
+      "executableName": "ffmpeg.exe",
+      "versionCmd": "-version",
+      "versionRegex": "ffmpeg version (\\w+[\\d.]*)",
+      "installPathExtract": {
+        "mode": "parentNLevel",
+        "level": 1
+      },
+      "envTemplate": [
+        {
+          "varKey": "PATH",
+          "varValue": "{{installPath}}\\bin",
+          "scope": "user",
+          "remark": "FFmpeg bin 目录",
+          "pathPosition": "append"
+        }
+      ],
+      "dependRuleIds": [],
+      "ignoreIfExists": false,
+      "customCheckScript": "",
+      "tags": [
+        "ffmpeg",
+        "media"
+      ],
+      "builtin": true
+    },
+    {
+      "id": "nginx-64f94930",
+      "name": "Nginx",
+      "alias": [
+        "nginx"
+      ],
+      "category": "运维、网络与系统工具",
+      "enable": true,
+      "description": "",
+      "scanSource": [
+        "registry",
+        "path-scan",
+        "customDir"
+      ],
+      "executableName": "nginx.exe",
+      "versionCmd": "-v",
+      "versionRegex": "nginx/(\\d+\\.\\d+[\\d.]*)",
+      "installPathExtract": {
+        "mode": "self",
+        "level": 0
+      },
+      "envTemplate": [
+        {
+          "varKey": "PATH",
+          "varValue": "{{installPath}}",
+          "scope": "user",
+          "remark": "Nginx 主目录",
+          "pathPosition": "append"
+        }
+      ],
+      "dependRuleIds": [],
+      "ignoreIfExists": false,
+      "customCheckScript": "",
+      "tags": [
+        "nginx",
+        "web"
+      ],
+      "builtin": true
+    },
+    {
+      "id": "openssl-3f919131",
+      "name": "OpenSSL",
+      "alias": [
+        "openssl"
+      ],
+      "category": "运维、网络与系统工具",
+      "enable": true,
+      "description": "",
+      "scanSource": [
+        "registry",
+        "path-scan",
+        "customDir"
+      ],
+      "executableName": "openssl.exe",
+      "versionCmd": "version",
+      "versionRegex": "OpenSSL (\\d+\\.[\\d.a-z]+)",
+      "installPathExtract": {
+        "mode": "parentNLevel",
+        "level": 1
+      },
+      "envTemplate": [
+        {
+          "varKey": "PATH",
+          "varValue": "{{installPath}}\\bin",
+          "scope": "user",
+          "remark": "OpenSSL bin 目录",
+          "pathPosition": "append"
+        }
+      ],
+      "dependRuleIds": [],
+      "ignoreIfExists": false,
+      "customCheckScript": "",
+      "tags": [
+        "openssl",
+        "security"
+      ],
+      "builtin": true
+    },
+    {
+      "id": "7zip-9fd7d532",
+      "name": "7-Zip",
+      "alias": [
+        "7zip",
+        "7z"
+      ],
+      "category": "IDE与工具",
+      "enable": true,
+      "description": "",
+      "scanSource": [
+        "registry",
+        "path-scan",
+        "customDir"
+      ],
+      "executableName": "7z.exe",
+      "versionCmd": "",
+      "versionRegex": "",
+      "installPathExtract": {
+        "mode": "parentNLevel",
+        "level": 1
+      },
+      "envTemplate": [
+        {
+          "varKey": "PATH",
+          "varValue": "{{installPath}}",
+          "scope": "user",
+          "remark": "7-Zip 目录",
+          "pathPosition": "append"
+        }
+      ],
+      "dependRuleIds": [],
+      "ignoreIfExists": false,
+      "customCheckScript": "",
+      "tags": [
+        "7zip",
+        "compress"
+      ],
+      "builtin": true
+    },
+    {
+      "id": "nssm-7cc60d33",
+      "name": "NSSM",
+      "alias": [
+        "nssm"
+      ],
+      "category": "运维、网络与系统工具",
+      "enable": true,
+      "description": "",
+      "scanSource": [
+        "registry",
+        "path-scan",
+        "customDir"
+      ],
+      "executableName": "nssm.exe",
+      "versionCmd": "",
+      "versionRegex": "",
+      "installPathExtract": {
+        "mode": "self",
+        "level": 0
+      },
+      "envTemplate": [
+        {
+          "varKey": "PATH",
+          "varValue": "{{installPath}}",
+          "scope": "user",
+          "remark": "NSSM 目录",
+          "pathPosition": "append"
+        }
+      ],
+      "dependRuleIds": [],
+      "ignoreIfExists": false,
+      "customCheckScript": "",
+      "tags": [
+        "nssm",
+        "service"
+      ],
+      "builtin": true
+    },
+    {
+      "id": "nvm-7c50cb34",
+      "name": "nvm-windows",
+      "alias": [
+        "nvm"
+      ],
+      "category": "脚本与环境工具",
+      "enable": true,
+      "description": "Node 多版本管理器，识别后可接管版本切换",
+      "scanSource": [
+        "registry",
+        "path-scan",
+        "customDir"
+      ],
+      "executableName": "nvm.exe",
+      "versionCmd": "version",
+      "versionRegex": "(\\d+\\.\\d+\\.\\d+)",
+      "installPathExtract": {
+        "mode": "self",
+        "level": 0
+      },
+      "envTemplate": [],
+      "dependRuleIds": [],
+      "ignoreIfExists": false,
+      "customCheckScript": "",
+      "tags": [
+        "nvm",
+        "node"
+      ],
+      "builtin": true
+    },
+    {
+      "id": "scoop-52183b35",
+      "name": "Scoop",
+      "alias": [
+        "scoop"
+      ],
+      "category": "脚本与环境工具",
+      "enable": true,
+      "description": "",
+      "scanSource": [
+        "registry",
+        "path-scan",
+        "customDir"
+      ],
+      "executableName": "scoop.cmd",
+      "versionCmd": "--version",
+      "versionRegex": "v?(\\d+\\.\\d+[\\d.]*)",
+      "installPathExtract": {
+        "mode": "self",
+        "level": 0
+      },
+      "envTemplate": [],
+      "dependRuleIds": [],
+      "ignoreIfExists": false,
+      "customCheckScript": "",
+      "tags": [
+        "scoop",
+        "package"
+      ],
+      "builtin": true
+    },
+    {
+      "id": "choco-6bfe3136",
+      "name": "Chocolatey",
+      "alias": [
+        "choco",
+        "chocolatey"
+      ],
+      "category": "脚本与环境工具",
+      "enable": true,
+      "description": "",
+      "scanSource": [
+        "registry",
+        "path-scan",
+        "customDir"
+      ],
+      "executableName": "choco.exe",
+      "versionCmd": "--version",
+      "versionRegex": "(\\d+\\.\\d+\\.\\d+)",
+      "installPathExtract": {
+        "mode": "self",
+        "level": 0
+      },
+      "envTemplate": [],
+      "dependRuleIds": [],
+      "ignoreIfExists": false,
+      "customCheckScript": "",
+      "tags": [
+        "choco",
+        "package"
+      ],
+      "builtin": true
+    },
+    {
+      "id": "winget-f8096937",
+      "name": "Winget",
+      "alias": [
+        "winget"
+      ],
+      "category": "脚本与环境工具",
+      "enable": true,
+      "description": "",
+      "scanSource": [
+        "registry",
+        "path-scan",
+        "customDir"
+      ],
+      "executableName": "winget.exe",
+      "versionCmd": "--version",
+      "versionRegex": "v?(\\d+[\\d.]*)",
+      "installPathExtract": {
+        "mode": "self",
+        "level": 0
+      },
+      "envTemplate": [],
+      "dependRuleIds": [],
+      "ignoreIfExists": false,
+      "customCheckScript": "",
+      "tags": [
+        "winget",
+        "package"
+      ],
+      "builtin": true
+    }
+  ]
+}

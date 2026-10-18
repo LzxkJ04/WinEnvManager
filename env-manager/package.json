@@ -1,0 +1,61 @@
+{
+  "name": "win-env-manager",
+  "version": "1.1.0",
+  "description": "WinEnv管家 - 用户变量 / 系统变量 / PATH 专项管理 / 快照差异对比 / 备份还原",
+  "main": "electron/main.js",
+  "author": "WinEnvManager",
+  "license": "MIT",
+  "private": true,
+  "scripts": {
+    "build": "vite build",
+    "start": "npm run build && electron .",
+    "dev": "electron .",
+    "dist": "vite build && electron-builder --win portable --x64"
+  },
+  "devDependencies": {
+    "@ant-design/icons-vue": "^7.0.1",
+    "@vitejs/plugin-vue": "^5.2.1",
+    "ant-design-vue": "^4.2.6",
+    "electron": "^33.2.1",
+    "electron-builder": "^25.1.8",
+    "pinia": "^2.3.0",
+    "vite": "^6.0.7",
+    "vue": "^3.5.13",
+    "vue-router": "^4.5.0"
+  },
+  "build": {
+    "appId": "com.winenvmanager.app",
+    "productName": "WinEnvManager",
+    "copyright": "Copyright © 2026 WinEnvManager",
+    "directories": {
+      "output": "out",
+      "buildResources": "build"
+    },
+    "files": [
+      "dist/**/*",
+      "electron/**/*",
+      "!**/*.map"
+    ],
+    "asar": true,
+    "compression": "maximum",
+    "win": {
+      "icon": "build/icon.ico",
+      "target": [
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "artifactName": "WinEnvManager-${version}-portable.exe",
+      "legalTrademarks": "WinEnvManager",
+      "requestedExecutionLevel": "asInvoker"
+    },
+    "portable": {
+      "artifactName": "WinEnvManager-${version}-portable.exe",
+      "unpackDirName": "WinEnvManager",
+      "requestExecutionLevel": "user"
+    }
+  }
+}

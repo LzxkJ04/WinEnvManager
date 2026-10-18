@@ -1,0 +1,40 @@
+[package]
+name = "winenv-manager"
+version = "2.0.0"
+description = "WinEnv管家 - Windows环境与开发环境一体化管理工具"
+authors = ["WinEnv管家"]
+edition = "2021"
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = ["tray-icon"] }
+tauri-plugin-dialog = "2"
+tauri-plugin-fs = "2"
+tauri-plugin-opener = "2"
+tauri-plugin-process = "2"
+tauri-plugin-store = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+regex = "1"
+base64 = "0.22"
+sha2 = "0.10"
+md-5 = "0.10"
+aes-gcm = "0.10"
+scrypt = "0.11"
+chrono = "0.4"
+dirs = "5"
+ureq = { version = "2", features = ["json"] }
+uuid = { version = "1", features = ["v4"] }
+
+[features]
+# 生产模式必须开启：is_dev() = !cfg!(feature = "custom-protocol")
+# 直接 cargo build --release 时必须加 --features tauri/custom-protocol
+custom-protocol = ["tauri/custom-protocol"]
+
+[profile.release]
+compression = true
+codegen-units = 16
+lto = false
+opt-level = 2

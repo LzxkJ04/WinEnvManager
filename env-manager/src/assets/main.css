@@ -1,0 +1,886 @@
+/* ===== Windows 环境变量管理工具 · 全局样式 =====
+   主色 #165DFF，辅助中性灰；圆角卡片、轻微阴影、鼠标悬浮高亮
+   字体：界面文字 Segoe UI，路径/变量值使用 Consolas 等宽字体 */
+
+:root {
+  --wem-primary: #165dff;
+  --wem-primary-hover: #4080ff;
+  --wem-primary-active: #0e42d2;
+
+  --wem-success: #00b42a;
+  --wem-warning: #ff7d00;
+  --wem-danger: #f53f3f;
+
+  --wem-bg: #f5f6f8;
+  --wem-card: #ffffff;
+  --wem-card-alt: #fafbfc;
+  --wem-border: #e5e6eb;
+  --wem-border-strong: #c9cdd4;
+
+  --wem-text: #1d2129;
+  --wem-text-2: #4e5969;
+  --wem-text-3: #86909c;
+
+  --wem-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04);
+  --wem-shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
+  --wem-shadow-lg: 0 6px 24px rgba(0, 0, 0, 0.1);
+
+  --wem-radius: 10px;
+  --wem-radius-lg: 14px;
+
+  --wem-mark-modified: rgba(255, 125, 0, 0.1);
+  --wem-mark-added: rgba(0, 180, 42, 0.1);
+  --wem-mark-removed: rgba(245, 63, 63, 0.1);
+  --wem-mono: Consolas, 'Cascadia Mono', 'Courier New', monospace;
+  --wem-fs: 13px;
+}
+
+html[data-theme='dark'] {
+  --wem-bg: #17171a;
+  --wem-card: #1f1f22;
+  --wem-card-alt: #26262a;
+  --wem-border: #333338;
+  --wem-border-strong: #454549;
+
+  --wem-text: #e8e8ea;
+  --wem-text-2: #b4b6bd;
+  --wem-text-3: #86888f;
+
+  --wem-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --wem-shadow: 0 2px 10px rgba(0, 0, 0, 0.45);
+  --wem-shadow-lg: 0 6px 24px rgba(0, 0, 0, 0.55);
+
+  --wem-mark-modified: rgba(255, 125, 0, 0.18);
+  --wem-mark-added: rgba(0, 180, 42, 0.18);
+  --wem-mark-removed: rgba(245, 63, 63, 0.2);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#app {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Segoe UI', 'Microsoft YaHei UI', 'PingFang SC', system-ui, -apple-system, sans-serif;
+  font-size: var(--wem-fs);
+  color: var(--wem-text);
+  background: var(--wem-bg);
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+.mono {
+  font-family: var(--wem-mono);
+  font-size: calc(var(--wem-fs) - 0.5px);
+  letter-spacing: 0.1px;
+}
+
+/* ===== 布局骨架 ===== */
+.app-shell {
+  height: 100vh;
+  max-width: 100vw;
+  display: flex;
+  flex-direction: column;
+  background: var(--wem-bg);
+  overflow: hidden;
+}
+
+.app-body {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+}
+
+.app-sider {
+  width: calc(172px + var(--wem-fs) * 4);
+  flex: 0 0 calc(172px + var(--wem-fs) * 4);
+  background: var(--wem-card);
+  border-right: 1px solid var(--wem-border);
+  display: flex;
+  flex-direction: column;
+  transition: width 0.18s ease, flex-basis 0.18s ease;
+}
+
+.app-sider.collapsed {
+  width: 64px;
+  flex-basis: 64px;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 16px 14px;
+  border-bottom: 1px solid var(--wem-border);
+}
+
+.brand-logo {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  flex: 0 0 30px;
+  object-fit: contain;
+}
+
+.brand-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.25;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.brand-title {
+  font-size: calc(var(--wem-fs) + 0.5px);
+  font-weight: 600;
+  color: var(--wem-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.brand-sub {
+  font-size: 11px;
+  color: var(--wem-text-3);
+}
+
+.app-nav {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px 8px 12px;
+}
+
+.app-nav .ant-menu {
+  border-inline-end: none !important;
+  background: transparent;
+}
+
+.app-nav .ant-menu-item {
+  height: calc(var(--wem-fs) + 23px);
+  line-height: calc(var(--wem-fs) + 23px);
+  margin: 2px 0;
+  border-radius: 8px;
+  font-size: var(--wem-fs);
+}
+
+.app-nav .ant-menu-title-content {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.app-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.app-header {
+  min-height: 52px;
+  flex: 0 0 auto;
+  background: var(--wem-card);
+  border-bottom: 1px solid var(--wem-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  padding: 8px 16px;
+  gap: 8px 12px;
+}
+
+.app-header-title {
+  font-size: calc(var(--wem-fs) + 2px);
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex: 1 1 180px;
+  overflow: hidden;
+}
+
+.app-header-title > :first-child {
+  flex: 0 0 auto;
+}
+
+.app-header-desc {
+  font-size: calc(var(--wem-fs) - 1px);
+  color: var(--wem-text-3);
+  font-weight: 400;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.app-content {
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  overflow-x: clip;
+  overflow-y: auto;
+  padding: 14px 16px 18px;
+}
+
+.app-content > * ,
+.split-2 > * ,
+.split-main-side > * ,
+.wem-card,
+.stat-grid,
+.stat-card {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.ant-table-wrapper,
+.ant-table-content,
+.ant-table-body {
+  max-width: 100%;
+}
+
+.ant-table-content {
+  overflow-x: auto;
+}
+
+/* ===== 卡片 ===== */
+.wem-card {
+  background: var(--wem-card);
+  border: 1px solid var(--wem-border);
+  border-radius: var(--wem-radius-lg);
+  box-shadow: var(--wem-shadow-sm);
+}
+
+.wem-card + .wem-card {
+  margin-top: 14px;
+}
+
+.wem-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--wem-border);
+  flex-wrap: wrap;
+}
+
+.wem-card-title {
+  font-size: calc(var(--wem-fs) + 0.5px);
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.wem-card-head .text-muted {
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.wem-card-body {
+  padding: 14px;
+}
+
+.wem-card-body.tight {
+  padding: 8px 10px;
+}
+
+/* ===== 统计卡片 ===== */
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(148px, 100%), 1fr));
+  gap: 12px;
+}
+
+@media (min-width: 1180px) {
+  .stat-grid {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+}
+
+.stat-card {
+  background: var(--wem-card);
+  border: 1px solid var(--wem-border);
+  border-radius: var(--wem-radius-lg);
+  padding: 14px 16px 14px 18px;
+  min-width: 0;
+  position: relative;
+  overflow: hidden;
+  box-shadow: var(--wem-shadow-sm);
+  transition: box-shadow 0.16s ease, transform 0.16s ease, border-color 0.16s ease;
+  cursor: default;
+}
+
+.stat-card::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 12px;
+  bottom: 12px;
+  width: 3px;
+  border-radius: 3px;
+  background: var(--wem-primary);
+}
+
+.stat-grid .stat-card:nth-child(2)::before { background: #722ed1; }
+.stat-grid .stat-card:nth-child(4)::before { background: var(--wem-danger); }
+.stat-grid .stat-card:nth-child(5)::before { background: var(--wem-success); }
+.stat-grid .stat-card:nth-child(6)::before { background: #fa541c; }
+
+.stat-card:hover {
+  box-shadow: var(--wem-shadow);
+  border-color: var(--wem-primary);
+  transform: translateY(-1px);
+}
+
+.stat-label {
+  font-size: 12px;
+  color: var(--wem-text-3);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.stat-value {
+  font-size: 24px;
+  font-weight: 600;
+  margin-top: 6px;
+  letter-spacing: -0.5px;
+  font-variant-numeric: tabular-nums;
+}
+
+.stat-extra {
+  font-size: 11.5px;
+  color: var(--wem-text-3);
+  margin-top: 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ===== 表格 ===== */
+.wem-table .ant-table {
+  background: transparent;
+  font-size: calc(var(--wem-fs) - 0.5px);
+}
+
+.wem-table .ant-table-cell {
+  overflow: hidden;
+}
+
+.wem-table .ant-table-thead > tr > th {
+  background: var(--wem-card-alt) !important;
+  font-weight: 600;
+  font-size: calc(var(--wem-fs) - 0.5px);
+  padding: 8px 10px !important;
+  border-bottom: 1px solid var(--wem-border) !important;
+}
+
+.wem-table .ant-table-tbody > tr > td {
+  padding: 7px 10px !important;
+  border-bottom: 1px solid var(--wem-border) !important;
+  transition: background 0.12s ease;
+}
+
+.wem-table .ant-table-tbody > tr:hover > td {
+  background: rgba(22, 93, 255, 0.06) !important;
+}
+
+.wem-table .ant-table-tbody > tr.row-selected > td {
+  background: rgba(22, 93, 255, 0.1) !important;
+}
+
+.wem-table .ant-table-tbody > tr.system-row > td {
+  background: rgba(0, 0, 0, 0.018);
+}
+
+html[data-theme='dark'] .wem-table .ant-table-tbody > tr.system-row > td {
+  background: rgba(255, 255, 255, 0.025);
+}
+
+html.wem-compact .wem-card + .wem-card {
+  margin-top: 8px;
+}
+
+html.wem-compact .wem-card-body {
+  padding: 8px 12px;
+}
+
+html.wem-compact .app-content {
+  padding: 8px 12px 12px;
+}
+
+html[data-theme='dark'] .wem-card {
+  box-shadow: none;
+}
+
+html[data-theme='dark'] .stat-card:hover,
+html[data-theme='dark'] .wem-table .ant-table-tbody > tr:hover > td {
+  background: rgba(64, 128, 255, 0.12) !important;
+}
+
+html[data-theme='dark'] .text-muted,
+html[data-theme='dark'] .kv-key {
+  color: #a8abb3;
+}
+
+tr.row-modified > td {
+  background: var(--wem-mark-modified) !important;
+}
+
+tr.row-added > td {
+  background: var(--wem-mark-added) !important;
+}
+
+tr.row-removed > td {
+  background: var(--wem-mark-removed) !important;
+}
+
+.cell-name {
+  font-weight: 600;
+  color: var(--wem-text);
+}
+
+.cell-tags {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+
+.cell-value {
+  font-family: var(--wem-mono);
+  font-size: calc(var(--wem-fs) - 1px);
+  color: var(--wem-text-2);
+  word-break: break-all;
+}
+
+.cell-path {
+  font-family: var(--wem-mono);
+  font-size: calc(var(--wem-fs) - 1px);
+  word-break: break-all;
+}
+
+/* 表格内的长路径/长变量值单行省略，避免把行高撑开；完整内容走悬浮提示 */
+.wem-table .cell-value,
+.wem-table .cell-path {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  word-break: normal;
+}
+
+.cell-tags .cell-name {
+  display: inline-block;
+  max-width: 100%;
+  min-width: 0;
+  flex: 0 1 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.wem-tip .ant-tooltip-inner {
+  max-width: 520px;
+  word-break: break-all;
+}
+
+.text-muted {
+  color: var(--wem-text-3);
+}
+
+/* ===== 状态栏 ===== */
+.status-bar {
+  min-height: 30px;
+  height: auto;
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  padding: 4px 14px;
+  font-size: calc(var(--wem-fs) - 1px);
+  overflow: hidden;
+  background: var(--wem-card);
+  border-top: 1px solid var(--wem-border);
+  color: var(--wem-text-2);
+}
+
+.status-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+}
+
+.status-item + .status-item {
+  padding-left: 12px;
+  border-left: 1px solid var(--wem-border);
+}
+
+.status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  display: inline-block;
+  flex: 0 0 7px;
+}
+
+.status-tip {
+  margin-left: auto;
+  min-width: 0;
+  flex: 1 1 80px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ===== 通用小工具类 ===== */
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.app-header .toolbar {
+  flex: 1 1 auto;
+  justify-content: flex-end;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.theme-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.theme-caret {
+  font-size: 10px;
+  color: var(--wem-text-3);
+}
+
+.menu-ico {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.toolbar-right {
+  margin-left: auto;
+}
+
+.split-2 {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 14px;
+}
+
+@media (max-width: 1180px) {
+  .split-2 {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.split-main-side {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 348px;
+  gap: 14px;
+  align-items: start;
+}
+
+@media (max-width: 1240px) {
+  .split-main-side {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.diff-row-added {
+  background: var(--wem-mark-added);
+}
+
+.diff-row-removed {
+  background: var(--wem-mark-removed);
+}
+
+.diff-row-changed {
+  background: var(--wem-mark-modified);
+}
+
+.diff-value-old {
+  text-decoration: line-through;
+  color: var(--wem-danger);
+  font-family: var(--wem-mono);
+  font-size: 12px;
+  word-break: break-all;
+}
+
+.diff-value-new {
+  color: var(--wem-success);
+  font-family: var(--wem-mono);
+  font-size: 12px;
+  word-break: break-all;
+}
+
+.kv-list {
+  display: grid;
+  grid-template-columns: 132px minmax(0, 1fr);
+  row-gap: 8px;
+  column-gap: 10px;
+  font-size: 12.5px;
+  align-items: start;
+}
+
+.kv-key {
+  color: var(--wem-text-3);
+}
+
+.kv-val {
+  font-family: var(--wem-mono);
+  word-break: break-all;
+  color: var(--wem-text);
+}
+
+.hint-box {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  padding: 9px 11px;
+  border-radius: 8px;
+  background: rgba(22, 93, 255, 0.06);
+  border: 1px solid rgba(22, 93, 255, 0.18);
+  font-size: 12px;
+  color: var(--wem-text-2);
+  line-height: 1.6;
+}
+
+.hint-box.warn {
+  background: rgba(255, 125, 0, 0.08);
+  border-color: rgba(255, 125, 0, 0.25);
+}
+
+.hint-box.danger {
+  background: rgba(245, 63, 63, 0.08);
+  border-color: rgba(245, 63, 63, 0.25);
+}
+
+.empty-block {
+  padding: 36px 16px;
+  text-align: center;
+  color: var(--wem-text-3);
+  font-size: 12.5px;
+}
+
+.demo-banner {
+  background: linear-gradient(90deg, #ff7d00, #ffa940);
+  color: #fff;
+  font-size: calc(var(--wem-fs) - 1px);
+  padding: 4px 16px;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  line-height: 1.5;
+}
+
+/* 滚动条美化 */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+/* 动画开关（设置 → 界面与主题）：页面切换和弹窗分开关 */
+html.wem-no-page-anim .wem-page-enter-active,
+html.wem-no-page-anim .wem-page-leave-active,
+html.wem-no-page-anim .wem-page-enter-active .stat-card,
+html.wem-no-page-anim .wem-page-enter-active .wem-card,
+html.wem-no-page-anim .wem-page-enter-active .tool-tile {
+  transition: none !important;
+  animation: none !important;
+}
+
+html.wem-no-modal-anim .ant-modal,
+html.wem-no-modal-anim .ant-modal-mask,
+html.wem-no-modal-anim .ant-modal-wrap,
+html.wem-no-modal-anim .ant-modal-content,
+html.wem-no-dialog-anim .ant-modal,
+html.wem-no-dialog-anim .ant-modal-mask,
+html.wem-no-dialog-anim .ant-modal-wrap,
+html.wem-no-dialog-anim .ant-modal-content,
+html.wem-no-modal-anim .ant-modal-confirm,
+html.wem-no-dialog-anim .ant-modal-confirm {
+  transition: none !important;
+  animation: none !important;
+}
+
+/* 关掉动画时，进入态的 opacity:0 不能停在原地，否则只剩灰罩、看不见对话框 */
+html.wem-no-modal-anim .ant-zoom-enter,
+html.wem-no-modal-anim .ant-zoom-appear,
+html.wem-no-modal-anim .ant-zoom-leave,
+html.wem-no-dialog-anim .ant-zoom-enter,
+html.wem-no-dialog-anim .ant-zoom-appear,
+html.wem-no-dialog-anim .ant-zoom-leave,
+html.wem-no-modal-anim .ant-fade-enter,
+html.wem-no-modal-anim .ant-fade-appear,
+html.wem-no-modal-anim .ant-fade-leave,
+html.wem-no-dialog-anim .ant-fade-enter,
+html.wem-no-dialog-anim .ant-fade-appear,
+html.wem-no-dialog-anim .ant-fade-leave {
+  opacity: 1 !important;
+  transform: none !important;
+  animation: none !important;
+}
+
+.ant-modal-mask {
+  background-color: rgba(0, 0, 0, var(--wem-mask-opacity, 0.45)) !important;
+}
+
+/* 页面切换：进入略抬起，离开更快淡出 */
+.wem-page-enter-active {
+  transition: opacity 0.28s cubic-bezier(0.22, 1, 0.36, 1), transform 0.34s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.wem-page-leave-active {
+  transition: opacity 0.16s ease, transform 0.16s ease;
+}
+
+.wem-page-enter-from {
+  opacity: 0;
+  transform: translateY(10px);
+}
+
+.wem-page-leave-to {
+  opacity: 0;
+  transform: translateY(-6px);
+}
+
+@keyframes wem-rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.wem-page-enter-active .stat-card,
+.wem-page-enter-active .wem-card,
+.wem-page-enter-active .tool-tile {
+  animation: wem-rise 0.42s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.wem-page-enter-active .stat-card:nth-child(2),
+.wem-page-enter-active .wem-card:nth-child(2),
+.wem-page-enter-active .tool-tile:nth-child(2) { animation-delay: 0.04s; }
+
+.wem-page-enter-active .stat-card:nth-child(3),
+.wem-page-enter-active .wem-card:nth-child(3),
+.wem-page-enter-active .tool-tile:nth-child(3) { animation-delay: 0.08s; }
+
+.wem-page-enter-active .stat-card:nth-child(4),
+.wem-page-enter-active .tool-tile:nth-child(4) { animation-delay: 0.12s; }
+
+.wem-page-enter-active .stat-card:nth-child(5),
+.wem-page-enter-active .tool-tile:nth-child(5) { animation-delay: 0.15s; }
+
+.wem-page-enter-active .stat-card:nth-child(6),
+.wem-page-enter-active .tool-tile:nth-child(n + 6) { animation-delay: 0.18s; }
+
+.ant-btn:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+.health-item {
+  transition: transform 0.18s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.18s ease, border-color 0.18s ease, background-color 0.18s ease;
+}
+
+body,
+.app-shell,
+.app-sider,
+.app-header,
+.app-content,
+.status-bar,
+.wem-card,
+.stat-card {
+  transition: background-color 0.28s ease, color 0.28s ease, border-color 0.28s ease;
+}
+
+.ant-btn,
+.health-item,
+.app-nav .ant-menu-item {
+  transition: background-color 0.16s ease, color 0.16s ease, border-color 0.16s ease, transform 0.16s ease, box-shadow 0.16s ease;
+}
+
+/* 滚动条美化开关：关闭后恢复系统原生滚动条 */
+html.wem-no-scrollbar ::-webkit-scrollbar {
+  width: auto;
+  height: auto;
+}
+
+html.wem-no-scrollbar ::-webkit-scrollbar-thumb {
+  background: unset;
+  border: unset;
+}
+
+/* 代码 / 日志面板独立字号。日志选择器要比 .mono / pre 更具体，避免被代码字号盖住。 */
+.mono,
+code,
+pre {
+  font-size: var(--wem-editor-fs, 12px);
+}
+
+.task-log,
+.log-line,
+.dlg-log,
+.log-view,
+.log-panel {
+  font-size: var(--wem-log-fs, 12px);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--wem-border-strong);
+  border-radius: 6px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--wem-text-3);
+  background-clip: content-box;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* 圆角弹窗统一风格 */
+.ant-modal-content,
+.ant-modal-header,
+.ant-drawer-content {
+  border-radius: var(--wem-radius-lg) !important;
+}
+
+.ant-modal-header {
+  border-radius: var(--wem-radius-lg) var(--wem-radius-lg) 0 0 !important;
+}
+
+.ant-card {
+  border-radius: var(--wem-radius) !important;
+}
