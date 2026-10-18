@@ -87,6 +87,10 @@
                 <template #icon><DeleteOutlined /></template>
                 删除选中{{ selectedRows.length ? `（${selectedRows.length}）` : '' }}
               </a-button>
+              <a-button size="small" danger :disabled="readonly || !currentPath" @click="deleteCurrentKey">
+                <template #icon><DeleteOutlined /></template>
+                删除该项
+              </a-button>
               <a-dropdown :disabled="!currentPath">
                 <a-button size="small" :disabled="!currentPath">
                   <template #icon><ExportOutlined /></template>
@@ -112,19 +116,37 @@
               </a-button>
             </div>
 
+            <!-- 分支内搜索 -->
+            <div class="toolbar" style="margin-bottom: 8px">
+              <a-input-search
+                v-model:value="branchKeyword"
+                size="small"
+                style="width: 300px"
+                placeholder="在当前分支内搜索键名或键值"
+                allow-clear
+                :loading="branchSearchLoading"
+                @search="doBranchSearch"
+              />
+              <a-checkbox v-model:checked="searchBinary" :disabled="branchSearchLoading">含二进制内容</a-checkbox>
+              <a-button v-if="branchSearchActive" size="small" @click="clearBranchSearch">退出搜索</a-button>
+              <span v-if="branchSearchActive" class="text-muted" style="font-size: 12px">
+                命中 {{ branchResults.length }} 条，扫描 {{ branchScanned }} 项{{ branchTruncated ? '（已达上限，请缩小范围）' : '' }}
+              </span>
+            </div>
+
             <WemTable
               ref="valueTable"
               :table-id="`reg-values-${detail.root || 'none'}`"
               row-key="__key"
               :rows="valueRows"
               :columns="valueColumns"
-              :loading="detail.loading"
+              :loading="detail.loading || branchSearchLoading"
               :error="detail.error"
               :page-size="12"
               :capabilities="valueCaps"
               empty-text="该注册表项下没有键值"
               @selection-change="(keys) => (selectedKeys = keys)"
-              @row-dblclick="(row) => openEditValue(row)"
+              @row-dblclick="(row) => (branchSearchActive ? openSearchHit(row) : openEditValue(row))"
               @retry="loadValues(currentPath)"
             >
               <template #cell="{ row, column }">
@@ -147,7 +169,7 @@
                 </template>
                 <template v-else-if="column.key === 'actions'">
                   <a-space size="small">
-                    <a :class="{ disabled: readonly }" @click.stop="readonly ? null : openEditValue(row)">编辑</a>
+                    <a :class="{ disabled: readonly }" @click.stop="tryEditValue(row)">编辑</a>
                     <a @click.stop="showValueDetail(row)">详情</a>
                     <a class="danger-link" :class="{ disabled: readonly }" @click.stop="readonly ? null : deleteSelectedValues(row)">
                       删除
@@ -225,7 +247,8 @@
                   v-for="ref in row.refs"
                   :key="ref.name"
                   :color="ref.exists ? (ref.scope === 'machine' ? 'purple' : 'blue') : 'red'"
-                  style="margin-bottom: 2px"
+                  style="margin-bottom: 2px; cursor: pointer"
+                  @click="openFindReferences(ref.name)"
                 >
                   %{{ ref.name }}%{{ ref.exists ? '' : ' 缺失' }}
                 </a-tag>
@@ -233,6 +256,88 @@
               </template>
             </template>
           </WemTable>
+
+          <div class="toolbar" style="margin-top: 12px">
+            <a-button size="small" :disabled="!depData.items.length" @click="openGraph">
+              查看依赖图谱
+            </a-button>
+            <a-button size="small" @click="openFindReferences('')">
+              反向查询：谁引用了某变量
+            </a-button>
+            <span class="text-muted" style="font-size: 12px">点击上方变量标签可反查全部引用该项的注册表键值</span>
+          </div>
+        </div>
+      </a-spin>
+    </a-modal>
+
+    <!-- 依赖图谱 -->
+    <a-modal v-model:open="graphOpen" title="注册表 → 环境变量 依赖图谱" width="900px" :footer="null">
+      <a-spin :spinning="graphLoading">
+        <div v-if="!graphData || !graphData.nodes.length" class="text-muted" style="padding: 20px 0">
+          没有可绘制的依赖关系（该分支的字符串键值未引用任何环境变量）。
+        </div>
+        <template v-else>
+          <div class="text-muted" style="font-size: 12px; margin-bottom: 8px">
+            蓝色为注册表键，橙色为环境变量；红色虚线表示引用的变量不存在，橙色表示存在循环引用。
+          </div>
+          <div class="graph-scroll">
+            <svg :width="graphLayout.width" :height="graphLayout.height" class="dep-graph">
+              <g v-for="(edge, i) in graphLayout.edges" :key="`e-${i}`">
+                <path
+                  :d="`M ${edge.x1} ${edge.y1} C ${edge.cx} ${edge.y1}, ${edge.cx} ${edge.y2}, ${edge.x2} ${edge.y2}`"
+                  fill="none"
+                  :stroke="edgeColor(edge.kind)"
+                  :stroke-width="edge.kind === 'ref' ? 1.5 : 2"
+                  :stroke-dasharray="edge.kind === 'ref' ? '0' : '5 4'"
+                />
+                <circle :cx="edge.x2" :cy="edge.y2" r="3" :fill="edgeColor(edge.kind)" />
+              </g>
+              <g v-for="node in graphLayout.nodes" :key="node.id">
+                <rect
+                  :x="node.x"
+                  :y="node.y"
+                  :width="node.kind === 'key' ? 230 : 200"
+                  height="24"
+                  rx="6"
+                  :fill="node.kind === 'key' ? 'var(--wem-card-alt)' : (node.kind === 'invalid' ? 'rgba(245,63,63,.12)' : 'rgba(255,125,0,.12)')"
+                  :stroke="node.kind === 'key' ? 'var(--wem-border)' : (node.kind === 'invalid' ? '#f53f3f' : '#ff7d00')"
+                />
+                <text :x="node.x + 8" :y="node.y + 16" class="graph-label" :fill="'var(--wem-text)'">
+                  {{ node.label.length > 26 ? node.label.slice(0, 26) + '…' : node.label }}
+                </text>
+              </g>
+            </svg>
+          </div>
+        </template>
+      </a-spin>
+    </a-modal>
+
+    <!-- 反向查询：哪些注册表项引用了指定变量 -->
+    <a-modal v-model:open="refOpen" title="反向查询：引用指定环境变量的注册表项" width="860px" :footer="null">
+      <div class="toolbar" style="margin-bottom: 10px">
+        <a-input
+          v-model:value="refVarName"
+          size="small"
+          style="width: 240px"
+          placeholder="环境变量名，如 JAVA_HOME"
+          @press-enter="runFindReferences"
+        />
+        <a-button size="small" :loading="refLoading" @click="runFindReferences">查询</a-button>
+        <span class="text-muted" style="font-size: 12px">
+          扫描范围 HKCU\Software，已扫描 {{ refScanned }} 项
+        </span>
+      </div>
+      <a-spin :spinning="refLoading">
+        <div v-if="!refResults.length" class="text-muted" style="padding: 16px 0">
+          暂无结果。可换一个变量名再试，或确认该变量已被某些注册表键值以 %变量名% 形式引用。
+        </div>
+        <div v-else class="ref-list">
+          <div v-for="(item, i) in refResults" :key="i" class="ref-item">
+            <div class="ref-path mono" :title="item.path">{{ item.path }}</div>
+            <div class="ref-name">{{ item.name || '(默认)' }}</div>
+            <div class="ref-value mono" :title="item.value">{{ item.value }}</div>
+            <a-button size="small" type="link" @click="jumpFromRef(item)">定位</a-button>
+          </div>
         </div>
       </a-spin>
     </a-modal>
@@ -373,6 +478,15 @@ const watchRef = ref(null)
 
 const currentPath = ref('')
 const selectedKeys = ref([])
+
+/* 分支内搜索（与全局搜索不同，只扫当前分支，结果替换键值表内容） */
+const branchKeyword = ref('')
+const branchSearchLoading = ref(false)
+const branchSearchActive = ref(false)
+const branchResults = ref([])
+const branchScanned = ref(0)
+const branchTruncated = ref(false)
+const searchBinary = ref(false)
 const valueTable = ref(null)
 
 const detail = reactive({
@@ -387,6 +501,9 @@ const detail = reactive({
 })
 
 const readonly = computed(() => detail.needsAdmin && !detail.writable)
+
+/** 最近一次权限检测结果（刷新树时强制重测，用于手动提权后解锁） */
+const adminFlag = ref(false)
 
 const valueCaps = {
   inline: false,
@@ -409,11 +526,21 @@ const valueColumns = [
   { title: '操作', key: 'actions', dataIndex: 'actions', width: 180, fixed: 'right', sortable: false, filterable: false }
 ]
 
-const valueRows = computed(() => (detail.values || []).map((row) => ({
-  ...row,
-  __key: row.name || '__default__',
-  note: noteOf(row)
-})))
+const valueRows = computed(() => {
+  // 搜索态下展示命中结果，每行带上所属完整路径，便于区分同名键值
+  if (branchSearchActive.value) {
+    return branchResults.value.map((row, i) => ({
+      ...row,
+      __key: `s-${i}-${row.path}-${row.name || '__default__'}`,
+      note: row.matchIn === 'key' ? '项名称命中' : (row.matchIn === 'value' ? '键值命中' : '')
+    }))
+  }
+  return (detail.values || []).map((row) => ({
+    ...row,
+    __key: row.name || '__default__',
+    note: noteOf(row)
+  }))
+})
 
 const selectedRows = computed(() =>
   valueRows.value.filter((row) => selectedKeys.value.includes(row.__key))
@@ -449,8 +576,17 @@ async function loadRoots() {
       return
     }
     roots.value = res.data || []
-    // 默认定位到用户环境变量分支，打开页面即可看到有用内容；失败则选中第一个根项
-    if (!currentPath.value) {
+    if (currentPath.value) return
+
+    // 设置页「打开注册表页面时自动预加载环境变量节点」，默认开启。
+    // 关闭时只加载根项列表，由用户自己点开需要的分支。
+    let preload = true
+    try {
+      const cfg = await api.config.get()
+      if (cfg.ok && cfg.data && cfg.data.regPreloadOnOpen === false) preload = false
+    } catch { preload = true }
+
+    if (preload) {
       const env = await api.reg.envPaths()
       if (env.ok && env.data && env.data.user) {
         await locatePath(env.data.user)
@@ -466,9 +602,19 @@ async function loadRoots() {
 async function refreshTree() {
   refreshing.value = true
   try {
+    // 文档要求：手动提权后点刷新应能解锁编辑。
+    // 强制刷新权限缓存，再用新的 admin 值重新判定只读状态。
+    const adminRes = await api.reg.isAdmin(true)
+    if (adminRes.ok && adminRes.data) {
+      adminFlag.value = !!adminRes.data.admin
+    }
     await treeRef.value?.refresh()
     if (currentPath.value) await loadValues(currentPath.value)
-    message.success('注册表树已刷新')
+    if (readonly.value) {
+      message.warning('注册表树已刷新；当前分支仍需管理员权限才能修改')
+    } else {
+      message.success('注册表树已刷新')
+    }
   } finally {
     refreshing.value = false
   }
@@ -479,6 +625,15 @@ function onSelectNode(path) {
   currentPath.value = path
   selectedKeys.value = []
   loadValues(path)
+}
+
+/** 行内「编辑」：只读分支下不弹窗（按钮本身已置灰，这里再兜一层） */
+function tryEditValue(row) {
+  if (readonly.value) {
+    message.warning('当前分支需要管理员权限才能修改')
+    return
+  }
+  openEditValue(row)
 }
 
 async function locatePath(path) {
@@ -523,6 +678,15 @@ async function afterWrite() {
   treeRef.value?.invalidate(currentPath.value)
   const parent = currentPath.value.replace(/\\[^\\]+$/, '')
   if (parent && parent !== currentPath.value) treeRef.value?.invalidate(parent)
+
+  // 改的是环境变量分支时，广播 WM_SETTINGCHANGE，
+  // 让资源管理器与新启动的进程立刻读到新值，避免「改了但没生效」。
+  if (detail.isEnv) {
+    try {
+      await api.reg.broadcast()
+      ui.tip('环境变量已写入注册表，已通知系统刷新', 'success')
+    } catch { /* 广播失败不影响写入结果 */ }
+  }
 }
 
 function onExternalChange(payload) {
@@ -695,6 +859,119 @@ async function deleteSelectedValues(single) {
   }
   if (failed.length) Modal.error({ title: `${failed.length} 个键值删除失败`, content: failed.join('\n') })
   await afterWrite()
+}
+
+/** 删除当前选中的整个注册表项（含子项）。需显式确认递归，防止误删整棵子树。 */
+async function deleteCurrentKey() {
+  if (readonly.value) {
+    message.error('当前分支需要管理员权限才能删除')
+    return
+  }
+  const path = currentPath.value
+  if (!path) return
+  const parts = String(path).split('\\')
+  if (parts.length <= 1) {
+    message.error('不允许删除注册表根项')
+    return
+  }
+
+  // 先探明影响范围，把子项与键值数量写进弹窗，避免用户不知情地删掉整棵子树
+  let subCount = 0
+  let valueCount = 0
+  try {
+    const [subRes, valRes] = await Promise.all([api.reg.subKeys(path), api.reg.values(path)])
+    if (subRes.ok) subCount = Array.isArray(subRes.data) ? subRes.data.length : 0
+    if (valRes.ok) valueCount = Array.isArray(valRes.data.values) ? valRes.data.values.length : 0
+  } catch { /* 探测失败不阻断，后续删除会给出真实错误 */ }
+
+  const hasChildren = subCount > 0
+  const ok = await confirmDanger({
+    title: '⚠️ 注册表修改高危警告',
+    warning:
+      '修改 Windows 注册表可能造成程序异常、系统无法启动等严重问题，' +
+      '强烈建议在修改前先对该注册表分支创建注册表备份。',
+    content: hasChildren
+      ? `即将删除注册表项及其全部子项，该操作不可撤销（可用注册表备份恢复）。`
+      : `即将删除该注册表项，该操作不可撤销（可用注册表备份恢复）。`,
+    hint: '如不确定影响范围，请先关闭本弹窗，用「导出 / 备份 → 备份当前分支」创建备份。',
+    rows: [{
+      注册表项: path,
+      子项数: subCount,
+      键值数: valueCount,
+      删除方式: hasChildren ? '递归删除（含全部子项）' : '仅删除该项'
+    }],
+    columns: [
+      { title: '注册表项', dataIndex: '注册表项', key: '注册表项', ellipsis: true },
+      { title: '子项数', dataIndex: '子项数', key: '子项数', width: 90 },
+      { title: '键值数', dataIndex: '键值数', key: '键值数', width: 90 },
+      { title: '删除方式', dataIndex: '删除方式', key: '删除方式', width: 200 }
+    ]
+  })
+  if (!ok) return
+
+  const res = await api.reg.deleteKey({ path, recursive: true })
+  if (!res.ok) {
+    message.error(res.message || '删除注册表项失败')
+    return
+  }
+  message.success(`已删除注册表项：${path}`)
+  ui.tip(`注册表项已删除：${path}`, 'warning')
+  // 父项重新定位，避免停留在已删除的节点上
+  const parent = parts.slice(0, -1).join('\\')
+  if (parent) await locatePath(parent)
+}
+
+/* ------------------------------ 分支内搜索 ------------------------------ */
+
+async function doBranchSearch() {
+  const kw = String(branchKeyword.value || '').trim()
+  if (!kw) {
+    message.info('请输入搜索关键词')
+    return
+  }
+  if (!currentPath.value) {
+    message.info('请先在左侧选择要搜索的分支')
+    return
+  }
+  branchSearchLoading.value = true
+  try {
+    const res = await api.reg.search({
+      path: currentPath.value,
+      keyword: kw,
+      scope: 'both',
+      includeBinary: searchBinary.value,
+      maxResults: 2000
+    })
+    if (!res.ok) {
+      message.error(res.message || '搜索失败')
+      return
+    }
+    const data = res.data || {}
+    branchResults.value = Array.isArray(data.results) ? data.results : []
+    branchScanned.value = Number(data.scanned) || 0
+    branchTruncated.value = !!data.truncated
+    branchSearchActive.value = true
+    selectedKeys.value = []
+    if (!branchResults.value.length) message.info('当前分支内没有匹配项')
+  } catch (err) {
+    message.error(err && err.message ? err.message : '搜索失败')
+  } finally {
+    branchSearchLoading.value = false
+  }
+}
+
+function clearBranchSearch() {
+  branchSearchActive.value = false
+  branchResults.value = []
+  branchKeyword.value = ''
+  selectedKeys.value = []
+}
+
+/** 从搜索结果跳回该项的键值列表 */
+async function openSearchHit(row) {
+  if (!row || !row.path) return
+  clearBranchSearch()
+  await locatePath(row.path)
 }
 
 /* ------------------------------ 导出 / 备份 ------------------------------ */
@@ -927,6 +1204,120 @@ const depColumns = [
   { title: '引用的变量', key: 'refs', dataIndex: 'refs' }
 ]
 
+/* ---------------- 依赖反向查询：找出所有引用某变量的注册表项 ---------------- */
+const refOpen = ref(false)
+const refLoading = ref(false)
+const refVarName = ref('')
+const refResults = ref([])
+const refScanned = ref(0)
+
+async function openFindReferences(varName) {
+  refVarName.value = String(varName || '')
+  refResults.value = []
+  refScanned.value = 0
+  refOpen.value = true
+  if (refVarName.value) await runFindReferences()
+}
+
+async function runFindReferences() {
+  const name = String(refVarName.value || '').trim()
+  if (!name) {
+    message.info('请输入要查询的环境变量名')
+    return
+  }
+  refLoading.value = true
+  try {
+    // 默认只扫 HKCU\Software，避免整盘搜索过慢；根路径可自行扩大
+    const res = await api.regDep.findReferences({ varName: name, roots: ['HKCU\\Software'] })
+    if (!res.ok) {
+      message.error(res.message || '查询失败')
+      return
+    }
+    const data = res.data || {}
+    refResults.value = Array.isArray(data.results) ? data.results : []
+    refScanned.value = Number(data.scanned) || 0
+    if (!refResults.value.length) message.info(`HKCU\\Software 下没有引用 %${name}% 的键值`)
+  } catch (err) {
+    message.error(err && err.message ? err.message : '查询失败')
+  } finally {
+    refLoading.value = false
+  }
+}
+
+/* ---------------- 依赖图谱：注册表键 -> 环境变量的有向图 ---------------- */
+const graphOpen = ref(false)
+const graphLoading = ref(false)
+const graphData = ref(null)
+
+async function openGraph() {
+  if (!depData.value) {
+    message.info('请先执行依赖分析')
+    return
+  }
+  graphOpen.value = true
+  graphLoading.value = true
+  try {
+    const res = await api.regDep.graph({ items: depData.value.items || [] })
+    if (!res.ok) {
+      message.error(res.message || '生成依赖图失败')
+      return
+    }
+    graphData.value = res.data || { nodes: [], edges: [] }
+  } catch (err) {
+    message.error(err && err.message ? err.message : '生成依赖图失败')
+  } finally {
+    graphLoading.value = false
+  }
+}
+
+/** 把节点的线性布局算出来，供 SVG 绘制 */
+const graphLayout = computed(() => {
+  const data = graphData.value
+  if (!data || !Array.isArray(data.nodes) || !data.nodes.length) return { nodes: [], edges: [], width: 0, height: 0 }
+  const keys = data.nodes.filter((n) => n.kind === 'key')
+  const vars = data.nodes.filter((n) => n.kind !== 'key')
+  const rowH = 34
+  const colGap = 300
+  const pos = new Map()
+  const maxRows = Math.max(keys.length, vars.length, 1)
+  keys.forEach((n, i) => pos.set(n.id, { x: 20, y: 20 + i * rowH }))
+  vars.forEach((n, i) => pos.set(n.id, { x: 20 + colGap, y: 20 + i * rowH }))
+  const nodes = data.nodes
+    .filter((n) => pos.has(n.id))
+    .map((n) => ({ ...n, ...pos.get(n.id) }))
+  const edges = (data.edges || [])
+    .filter((e) => pos.has(e.from) && pos.has(e.to))
+    .map((e) => {
+      const a = pos.get(e.from)
+      const b = pos.get(e.to)
+      return {
+        ...e,
+        x1: a.x + 230,
+        y1: a.y + 12,
+        x2: b.x,
+        y2: b.y + 12,
+        // 曲线控制点，避免连线互相重叠
+        cx: (a.x + 230 + b.x) / 2
+      }
+    })
+  return { nodes, edges, width: colGap + 280, height: Math.max(120, 20 + maxRows * rowH) }
+})
+
+function edgeColor(kind) {
+  if (kind === 'invalid') return '#f53f3f'
+  if (kind === 'cycle') return '#ff7d00'
+  return '#c9cdd4'
+}
+
+/** 从反向查询结果跳转到对应注册表项 */
+async function jumpFromRef(item) {
+  if (!item || !item.path) return
+  refOpen.value = false
+  depOpen.value = false
+  await locatePath(item.path)
+}
+
+
 async function analyzeDependency() {
   if (!currentPath.value) {
     message.info('请先选择一个注册表分支')
@@ -1082,5 +1473,65 @@ onMounted(loadRoots)
 
 .dep-body {
   padding-top: 4px;
+}
+
+/* 依赖图谱 */
+.graph-scroll {
+  max-height: 460px;
+  overflow: auto;
+  border: 1px solid var(--wem-border);
+  border-radius: 8px;
+  background: var(--wem-card);
+}
+
+.dep-graph {
+  display: block;
+}
+
+.graph-label {
+  font-size: 11px;
+  font-family: var(--wem-mono);
+  dominant-baseline: middle;
+}
+
+/* 反向查询结果列表 */
+.ref-list {
+  max-height: 420px;
+  overflow: auto;
+}
+
+.ref-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) 140px minmax(0, 1.4fr) 56px;
+  gap: 10px;
+  align-items: center;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--wem-border);
+  font-size: 12.5px;
+}
+
+.ref-item:last-child {
+  border-bottom: none;
+}
+
+.ref-path {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--wem-text-2);
+}
+
+.ref-name {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ref-value {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--wem-text-3);
 }
 </style>

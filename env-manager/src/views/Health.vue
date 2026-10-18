@@ -418,6 +418,15 @@ async function loadLast() {
   const data = res.data || {}
   lastAt.value = Number(data.scannedAt) || 0
   lastStats.value = data.stats || { critical: 0, warning: 0, info: 0 }
+  // 回填上次扫描结果，进入页面即可看到历史明细（文档要求首页展示最近一次结果）
+  if (!result.value && Array.isArray(data.items) && data.items.length && data.score != null) {
+    result.value = {
+      score: data.score,
+      scannedAt: Number(data.scannedAt) || 0,
+      stats: lastStats.value,
+      items: data.items
+    }
+  }
 }
 
 async function scan(notify) {

@@ -1,0 +1,23 @@
+fix: 修复注册表恢复、监控来源判定与定时任务参数失效
+
+注册表
+- readTree 子项路径带 PowerShell 提供程序前缀（Microsoft.PowerShell.Core + Registry 双冒号 + HKEY_...），
+  恢复时被当成非法根项，导致子项重建失败并触发回滚。改为统一剥离前缀，
+  parsePath / normalizeKeyPath 各加一道兜底
+- 变更监控来源判定由「路径 + 时间窗」改为「路径 + 键名 + 写入值」三项匹配，逐条判定；
+  审计兜底只认带键名且写入值一致的记录，避免批量动作把整条分支误标为本软件
+- registry.js 的写入 / 删除后主动记账，不再依赖审计字段结构
+
+健康诊断
+- health:lastScore 一并返回上次明细，前端回填，进入页面即可看到得分与问题列表
+
+定时任务
+- 审计导出目录、注册表备份分支、健康报告目录、快照保护标记四项参数此前未传给执行体，现已接通
+- 审计导出不再固定写数据目录 exports/，尊重用户配置的目录
+
+测试
+- 新增 test-deep-3（40 项）、test-sched-entry（5 项）、test-sched-params（7 项）
+- 修复 test-schedule-run 清理前缀拼写错误，clean-test-data 补监控日志清理
+
+版本 1.2.1（package.json / setup.iss / tauri.conf.json / Cargo.toml 同步）
+测试：13 套 185 项 + 原有回归 107 项全部通过

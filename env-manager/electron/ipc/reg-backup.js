@@ -150,6 +150,17 @@ function broadcastToWindows(channel, payload) {
 /* --------------------------- 目录 --------------------------- */
 
 function backupDir() {
+  // 设置页「注册表备份默认存储目录」优先；未配置时落在用户数据目录下
+  let custom = ''
+  try {
+    const cfg = store.readConfig()
+    custom = String(cfg.regBackupDir || '').trim()
+  } catch { /* 读配置失败按默认目录 */ }
+  if (custom) {
+    try {
+      return store.ensureDir(custom)
+    } catch { /* 自定义目录不可用则回落默认 */ }
+  }
   return store.ensureDir(path.join(store.appDataDir(), BACKUP_SUBDIR))
 }
 
@@ -600,24 +611,48 @@ const watchers = new Map()
 /** 本进程最近写入的注册表路径：path(小写) => 写入时间 */
 const lastSelfWrite = new Map()
 
-function markSelfWrite(regPath) {
+/**
+ * 记录本软件刚写过的键：路径 + 键名 + 写入后的值。
+ * 只按路径/键名记账，会把「同键位被外部改写」也当成自己写的：
+ * 本软件刚写过 Keep=init，两秒后外部把 Keep 改成 other，仍会被误标。
+ * 带上值后，只有「新值正好等于本软件写进去的值」才算自己所为。
+ */
+function markSelfWrite(regPath, valueName, newValue) {
   const key = normStr(regPath).replace(/[\\/]+$/, '').toLowerCase()
-  if (key) lastSelfWrite.set(key, Date.now())
+  if (!key) return
+  const nm = normStr(valueName).toLowerCase()
+  lastSelfWrite.set(`${key}\u0000${nm}`, { at: Date.now(), value: normStr(newValue) })
 }
 
-function isSelfWrite(regPath) {
+/** 判断某个具体键值的变更是否由本软件发起 */
+function isSelfWrite(regPath, valueName, newValue) {
   const now = Date.now()
-  for (const [key, at] of lastSelfWrite) {
-    if (now - at > SELF_WRITE_WINDOW) { lastSelfWrite.delete(key); continue }
-    if (pathOverlap(key, regPath)) return true
+  const key = normStr(regPath).replace(/[\\/]+$/, '').toLowerCase()
+  const nm = normStr(valueName).toLowerCase()
+  const composite = `${key}\u0000${nm}`
+  const val = normStr(newValue)
+  for (const [mark, info] of lastSelfWrite) {
+    const at = info && typeof info === 'object' ? info.at : info
+    if (now - at > SELF_WRITE_WINDOW) { lastSelfWrite.delete(mark); continue }
+    if (mark !== composite) continue
+    // 值一致才认定是本软件写的那一次
+    if (info && typeof info === 'object' && normStr(info.value) === val) return true
   }
-  // 其他模块（registry.js / reg-extra.js）写入时不经过本文件，用审计日志兜底判断
+  // 其他模块（registry.js / reg-extra.js）写入时不经过本文件，用审计日志兜底。
+  // 注意：批量类动作（恢复/导入/替换）的审计只记分支路径、不带键名，
+  // 若把「无键名」当成匹配，整条分支的任何外部改动都会被误判为本软件所为。
+  // 因此这里只认「带键名 + 带 after 值且都一致」的记录。
   try {
     const rows = store.listAudit(150)
     for (const row of rows) {
       if (!row || row.category !== 'registry') continue
       if (!SELF_WRITE_ACTIONS.has(row.action)) continue
-      if (now - (Number(row.at) || 0) > SELF_WRITE_WINDOW) continue
+      const at = Number(row.at) || 0
+      if (now - at > SELF_WRITE_WINDOW) continue
+      const rowName = normStr(row.name).toLowerCase()
+      if (!rowName || rowName !== nm) continue
+      const after = row.after === undefined ? null : normStr(row.after)
+      if (after === null || after !== val) continue
       if (pathOverlap(normStr(row.path), regPath)) return true
     }
   } catch { /* 审计不可读时按外部处理 */ }
@@ -633,7 +668,50 @@ function appendWatchLogs(records) {
   try {
     const text = records.map((r) => JSON.stringify(r)).join('\n') + '\n'
     fs.appendFileSync(watchLogFile(), text, 'utf8')
+    pruneWatchLogs()
   } catch { /* 写日志失败不影响监控 */ }
+}
+
+/**
+ * 按设置页「任务日志最大保留条数」(scheduleLogKeep，默认 200) 裁剪监控日志。
+ * 只保留最新的 N 条，避免长期监听把磁盘写满。
+ */
+function pruneWatchLogs() {
+  let keep = 200
+  try {
+    const n = Number(store.readConfig().scheduleLogKeep)
+    if (Number.isFinite(n) && n > 0) keep = Math.floor(n)
+  } catch { keep = 200 }
+  try {
+    const dir = watchDir()
+    const files = fs.readdirSync(dir).filter((f) => /^watch-\d+\.jsonl$/.test(f)).sort()
+    if (!files.length) return
+    // 先算出总条数，只有超出上限才动手，避免频繁重写
+    let total = 0
+    const counts = new Map()
+    for (const f of files) {
+      const lines = fs.readFileSync(path.join(dir, f), 'utf8').split('\n').filter(Boolean)
+      counts.set(f, lines.length)
+      total += lines.length
+    }
+    if (total <= keep) return
+    // 从最旧的文件开始丢，最后一个文件按需要截断尾部保留最新
+    let drop = total - keep
+    for (const f of files) {
+      if (drop <= 0) break
+      const p = path.join(dir, f)
+      const lines = fs.readFileSync(p, 'utf8').split('\n').filter(Boolean)
+      if (lines.length <= drop) {
+        drop -= lines.length
+        try { fs.rmSync(p, { force: true }) } catch { /* ignore */ }
+      } else {
+        // 需要从该文件头部丢掉 drop 条，保留后面的（较新的）
+        const kept = lines.slice(drop)
+        fs.writeFileSync(p, kept.join('\n') + '\n', 'utf8')
+        drop = 0
+      }
+    }
+  } catch { /* 清理失败不影响监控 */ }
 }
 
 function snapshotWatchState(tree, options) {
@@ -697,9 +775,9 @@ async function tickWatcher(watcher) {
     if (!changes.length) return
 
     watcher.eventCount += changes.length
-    const origin = isSelfWrite(watcher.path) ? 'WinEnv管家' : '外部'
     const at = Date.now()
     const capped = changes.slice(0, 500)
+    // 逐条判定来源：同一批变更里可能既有本软件写的，也有外部程序写的
     const records = capped.map((c) => ({
       at,
       atText: tsText(at),
@@ -708,13 +786,14 @@ async function tickWatcher(watcher) {
       name: c.name,
       oldValue: c.oldValue,
       newValue: c.newValue,
-      origin
+      origin: isSelfWrite(c.path, c.name, c.newValue) ? 'WinEnv管家' : '外部'
     }))
     appendWatchLogs(records)
+    const selfCount = records.filter((r) => r.origin === 'WinEnv管家').length
     audit('registryWatchEvent', {
       path: watcher.path,
       count: changes.length,
-      origin,
+      origin: selfCount === records.length ? 'WinEnv管家' : (selfCount === 0 ? '外部' : '混合'),
       sample: capped.slice(0, 20).map((c) => ({ path: c.path, name: c.name, changeType: c.changeType }))
     })
     broadcastToWindows('reg:external-changed', { path: watcher.path, changes: capped })
@@ -963,7 +1042,26 @@ function register(handle) {
       sha256: created.sha256,
       file: created.file
     })
-    return { id: created.id, file: created.file, sha256: created.sha256, keyCount: created.keyCount, size: created.size }
+    // 按设置页「注册表备份最大保留数量」自动清理未保护的旧备份
+    let pruned = 0
+    try {
+      const keepCfg = Number(store.readConfig().regBackupKeep) || 0
+      if (keepCfg > 0) {
+        const list = listBackups()
+        for (const item of list.slice(keepCfg)) {
+          if (item.protected) continue
+          try {
+            fs.rmSync(item.file, { force: true })
+            try { fs.rmSync(sidecarFile(backupDir(), item.id), { force: true }) } catch { /* ignore */ }
+            pruned += 1
+          } catch { /* 单个删除失败不影响返回 */ }
+        }
+      }
+    } catch { /* 清理失败不阻断备份结果 */ }
+    return {
+      id: created.id, file: created.file, sha256: created.sha256,
+      keyCount: created.keyCount, size: created.size, pruned
+    }
   })
 
   handle('regBackup:preview', async (event, payload) => {
@@ -1029,7 +1127,10 @@ function register(handle) {
       return { applied: 0, rolledBack: 0, rollbackFailed: 0 }
     }
 
-    markSelfWrite(regPath)
+    // 恢复前先把「即将写入的每个键」记账，监控才能逐条标成本软件
+    for (const change of changes) {
+      markSelfWrite(change.path, change.name, change.action === 'delete' ? '' : change.after)
+    }
 
     const applied = []
     let failure = null
@@ -1053,7 +1154,11 @@ function register(handle) {
       }
     }
 
-    markSelfWrite(regPath)
+    // 循环结束后重记一次，把每个实际写入的键覆盖到最新时间点
+    for (const item of applied) {
+      markSelfWrite(item.change.path, item.change.name,
+        item.change.action === 'delete' ? '' : item.change.after)
+    }
 
     if (failure) {
       let rollbackFailed = 0
@@ -1061,11 +1166,12 @@ function register(handle) {
         try {
           if (item.undo.kind === 'delete') await regsvc.deleteValue(item.undo.path, item.undo.name)
           else await regsvc.setValue(item.undo.path, item.undo.name, item.undo.type, item.undo.value)
+          markSelfWrite(item.undo.path, item.undo.name,
+            item.undo.kind === 'delete' ? '' : item.undo.value)
         } catch {
           rollbackFailed += 1
         }
       }
-      markSelfWrite(regPath)
       await regsvc.broadcastRegistryChange().catch(() => false)
       audit('registryRestoreRolledBack', {
         id,
@@ -1170,8 +1276,12 @@ function register(handle) {
 
   handle('regBackup:prune', async (event, payload) => {
     const raw = payload && typeof payload === 'object' ? payload.keep : payload
+    // 显式传参优先；否则用设置页的「注册表备份最大保留数量」，默认 30
+    let cfgKeep = 0
+    try { cfgKeep = Number(store.readConfig().regBackupKeep) || 0 } catch { cfgKeep = 0 }
+    const fallback = cfgKeep > 0 ? cfgKeep : 30
     const keepNum = Number(raw)
-    const keep = Number.isFinite(keepNum) && keepNum > 0 ? Math.floor(keepNum) : 20
+    const keep = Number.isFinite(keepNum) && keepNum > 0 ? Math.floor(keepNum) : fallback
     const list = listBackups()
     let removed = 0
     for (const item of list.slice(Math.max(0, keep))) {
@@ -1667,4 +1777,21 @@ function register(handle) {
   } catch { /* app 不可用时忽略 */ }
 }
 
-module.exports = { register }
+/**
+ * 供其他模块调用：为指定路径创建一个 JSON 备份（用于写操作前的自动保底备份）。
+ * 与 regBackup:create 走同一套 createBackup，保证哈希与元数据一致。
+ * @param {{path:string, name:string, note?:string, tags?:string[]}} options
+ */
+async function createBackupForPath(options) {
+  const opts = options || {}
+  if (!normStr(opts.path).trim()) throw new Error('注册表路径不能为空')
+  return createBackup({
+    path: opts.path,
+    name: opts.name,
+    note: opts.note || '',
+    tags: opts.tags || [],
+    format: 'json'
+  })
+}
+
+module.exports = { register, createBackupForPath, markSelfWrite }

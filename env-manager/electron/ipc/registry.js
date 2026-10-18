@@ -17,6 +17,7 @@
  */
 const { dialog, BrowserWindow } = require('electron')
 const regsvc = require('../lib/regsvc')
+const store = require('../lib/store')
 
 /** 对外暴露的四个根项（顺序与注册表编辑器一致，不含 HKCC） */
 const ROOT_LIST = [
@@ -29,6 +30,40 @@ const ROOT_LIST = [
 /** 单参数调用兼容：payload 可能是字符串，也可能是 { path } */
 function pickPath(payload) {
   return typeof payload === 'string' ? payload : (payload && payload.path) || ''
+}
+
+/**
+ * 导入模式：显式传参优先，否则用设置页「导入 reg 默认模式」。
+ * append = 仅新增（跳过冲突），merge = 合并覆盖
+ */
+function resolveImportMode(mode) {
+  const m = String(mode || '').toLowerCase()
+  if (m === 'append' || m === 'merge') return m
+  try {
+    const cfg = store.readConfig()
+    return String(cfg.regImportMode || '') === 'append' ? 'append' : 'merge'
+  } catch {
+    return 'merge'
+  }
+}
+
+/** 搜索是否默认包含二进制内容（设置页开关） */
+function defaultIncludeBinary(explicit) {
+  if (typeof explicit === 'boolean') return explicit
+  try {
+    return store.readConfig().regSearchBinary === true
+  } catch {
+    return false
+  }
+}
+
+/** 恢复前的写操作自动备份开关（设置页 regAutoBackupBeforeWrite，默认开启） */
+function autoBackupBeforeWrite() {
+  try {
+    return store.readConfig().regAutoBackupBeforeWrite !== false
+  } catch {
+    return true
+  }
 }
 
 /** 解析路径，失败直接抛中文错误 */
@@ -72,8 +107,35 @@ function focusedWindow() {
   }
 }
 
-function register(handle) {
-  /* ============================ 浏览 ============================ */
+/**
+ * 写操作前的自动保底备份（受设置页 regAutoBackupBeforeWrite 控制，默认开启）。
+ * 备份失败不阻断写入，但会写日志，避免让用户误以为已备份。
+ * @param {string} fullPath 目标注册表项
+ * @param {string} label 备份名称前缀
+ */
+async function autoBackup(fullPath, label) {
+  if (!autoBackupBeforeWrite()) return null
+  try {
+    // 延迟 require，避免与 reg-backup 形成循环依赖
+    const backupMod = require('./reg-backup')
+    const creator = backupMod.createBackupForPath
+    if (typeof creator !== 'function') return null
+    const res = await creator({
+      path: fullPath,
+      name: `${label} ${new Date().toLocaleString('zh-CN')}`,
+      note: '写操作前自动创建',
+      tags: ['auto']
+    })
+    return res
+  } catch (err) {
+    try {
+      store.writeLog('warn', '注册表写操作前的自动备份失败', { path: fullPath, message: err && err.message })
+    } catch { /* ignore */ }
+    return null
+  }
+}
+
+function register(handle) {  /* ============================ 浏览 ============================ */
 
   /* 1. 根项列表 */
   handle('reg:roots', async () => {
@@ -156,8 +218,11 @@ function register(handle) {
     const { path: rawPath, name, type, value } = payload || {}
     const { parsed } = await guardWrite(rawPath)
     const valueName = name == null ? '' : String(name)
+    const backup = await autoBackup(parsed.full, '写前自动备份')
     await regsvc.setValue(parsed.full, valueName, type || 'REG_SZ', value == null ? '' : value)
-    return { ok: true }
+    // 记账：监控靠它把这次变更标为「本软件」，否则会被当成外部改动
+    try { require('./reg-backup').markSelfWrite(parsed.full, valueName, value == null ? '' : value) } catch { /* ignore */ }
+    return { ok: true, backupId: backup ? backup.id : '' }
   })
 
   /* 10. 删除键值（name 传空字符串表示默认键值） */
@@ -165,8 +230,10 @@ function register(handle) {
     const { path: rawPath, name } = payload || {}
     if (name === undefined || name === null) throw new Error('请指定要删除的键值名称（默认键值请传空字符串）')
     const { parsed } = await guardWrite(rawPath)
+    const backup = await autoBackup(parsed.full, '删除前自动备份')
     await regsvc.deleteValue(parsed.full, String(name))
-    return { ok: true }
+    try { require('./reg-backup').markSelfWrite(parsed.full, String(name), '') } catch { /* ignore */ }
+    return { ok: true, backupId: backup ? backup.id : '' }
   })
 
   /* 11. 删除项（非递归且非空时给出中文提示） */
@@ -215,13 +282,14 @@ function register(handle) {
     const target = String(file || '').trim()
     if (!target) throw new Error('请先选择要导入的 .reg 文件')
     const parsed = await regsvc.parseRegFile(target)
-    const rows = await regsvc.previewRegImport(parsed.nodes, mode === 'append' ? 'append' : 'merge')
+    const rows = await regsvc.previewRegImport(parsed.nodes, resolveImportMode(mode))
     return {
       nodes: parsed.nodes,
       encoding: parsed.encoding,
       issues: parsed.issues,
       rows,
-      summary: summarize(rows)
+      summary: summarize(rows),
+      mode: resolveImportMode(mode)
     }
   })
 
@@ -231,8 +299,8 @@ function register(handle) {
     const target = String(file || '').trim()
     if (!target) throw new Error('请先选择要导入的 .reg 文件')
     const parsed = await regsvc.parseRegFile(target)
-    const rows = await regsvc.previewRegImport(parsed.nodes, mode === 'append' ? 'append' : 'merge')
-    return { rows, summary: summarize(rows), issues: parsed.issues }
+    const rows = await regsvc.previewRegImport(parsed.nodes, resolveImportMode(mode))
+    return { rows, summary: summarize(rows), issues: parsed.issues, mode: resolveImportMode(mode) }
   })
 
   /* 15. 执行导入（走事务回滚） */
@@ -286,7 +354,8 @@ function register(handle) {
     const p = parseOrThrow(rawPath)
     const options = {
       scope: scope === 'name' || scope === 'value' ? scope : 'both',
-      includeBinary: !!includeBinary,
+      // 未显式指定时读设置页「搜索是否检索二进制数据」，默认关闭（耗时）
+      includeBinary: defaultIncludeBinary(includeBinary),
       maxResults: Number(maxResults) > 0 ? Number(maxResults) : 2000,
       caseSensitive: !!caseSensitive
     }

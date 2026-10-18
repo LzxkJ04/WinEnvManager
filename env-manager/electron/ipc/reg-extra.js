@@ -593,10 +593,12 @@ function packModules() {
     },
     {
       key: 'searchHistory',
-      name: '搜索历史',
+      name: '全局搜索历史',
       file: '',
-      available: false,
-      reason: '搜索历史保存在渲染进程 localStorage（wem-search-history），主进程无法读取'
+      // 搜索历史存在渲染进程 localStorage，主进程读不到文件；
+      // 改由前端通过 extra.searchHistory 传入，导入时原样回传，由前端写回 localStorage
+      available: true,
+      reason: ''
     }
   ]
 }
@@ -614,7 +616,8 @@ function normalizeModuleKey(key) {
 }
 
 /** 采集各模块数据；缺文件的标 available:false 并带原因 */
-function collectModules(onlyKeys) {
+function collectModules(onlyKeys, extraInput) {
+  const extra = extraInput && typeof extraInput === 'object' ? extraInput : {}
   const wanted = Array.isArray(onlyKeys) && onlyKeys.length
     ? new Set(onlyKeys.map(normalizeModuleKey).filter(Boolean))
     : null
@@ -636,6 +639,11 @@ function collectModules(onlyKeys) {
         data = cfg
       } else if (def.key === 'registryFavorites') {
         data = favLoad()
+      } else if (def.key === 'searchHistory') {
+        // 前端把 localStorage 里的搜索历史传进来，主进程读不到浏览器存储
+        const incoming = extra.searchHistory
+        if (Array.isArray(incoming) && incoming.length) data = incoming
+        else reason = '前端未提供搜索历史（可能尚未产生记录）'
       } else if (fs.existsSync(def.file)) {
         data = JSON.parse(fs.readFileSync(def.file, 'utf8'))
       } else {
@@ -757,8 +765,8 @@ function readPackFile(file, password) {
 }
 
 async function configPackExport(payload) {
-  const { modules: picked, note, tags, file, password } = payload || {}
-  const { modules, meta } = collectModules(picked)
+  const { modules: picked, note, tags, file, password, searchHistory } = payload || {}
+  const { modules, meta } = collectModules(picked, { searchHistory })
   const usable = meta.filter((m) => m.available).length
   if (!usable) throw new Error('所选模块都没有可导出的数据')
   const doc = packDoc(modules, meta, { note, tags })
@@ -1410,11 +1418,15 @@ async function healthScan() {
 
 function healthLastScore() {
   const data = readJson(path.join(store.appDataDir(), 'health', 'last.json'))
-  if (!data || typeof data !== 'object') return { scannedAt: 0, score: null, stats: { critical: 0, warning: 0, info: 0 } }
+  if (!data || typeof data !== 'object') {
+    return { scannedAt: 0, score: null, stats: { critical: 0, warning: 0, info: 0 }, items: [] }
+  }
   return {
     scannedAt: Number(data.scannedAt) || 0,
     score: typeof data.score === 'number' ? data.score : null,
-    stats: data.stats || { critical: 0, warning: 0, info: 0 }
+    stats: data.stats || { critical: 0, warning: 0, info: 0 },
+    // 一并返回上次明细，进入页面即可看到上次结果，不必强制重扫
+    items: Array.isArray(data.items) ? data.items : []
   }
 }
 
@@ -1935,11 +1947,14 @@ async function changeTaskState(taskId, enabled) {
 
 /* ------------------------------ 任务执行体 ------------------------------ */
 
-async function exportAuditLogs() {
+async function exportAuditLogs(params) {
+  const opts = params && typeof params === 'object' ? params : {}
   const dir = store.ensureDir(store.auditDir())
   const files = fs.readdirSync(dir).filter((f) => f.toLowerCase().endsWith('.jsonl')).sort()
   if (!files.length) return { files: 0, target: '', lines: 0 }
-  const outDir = store.ensureDir(path.join(store.appDataDir(), 'exports'))
+  // 用户可在任务参数里指定导出目录，未指定时才落到默认 exports
+  const wanted = normStr(opts.dir || opts.exportDir || '').trim()
+  const outDir = wanted ? store.ensureDir(wanted) : store.ensureDir(path.join(store.appDataDir(), 'exports'))
   const target = path.join(outDir, `audit-export-${fileStamp()}.jsonl`)
   let lines = 0
   const chunks = []
@@ -1952,8 +1967,12 @@ async function exportAuditLogs() {
   return { files: files.length, target, lines }
 }
 
-async function backupRegistryBranches(paths) {
-  const list = Array.isArray(paths) && paths.length ? paths : [regsvc.envPaths().user, regsvc.envPaths().machine]
+async function backupRegistryBranches(paths, params) {
+  const opts = params && typeof params === 'object' ? params : {}
+  // 任务参数既可能给数组，也可能给单条 path 字符串
+  const single = normStr(opts.path || '').trim()
+  const arr = Array.isArray(paths) && paths.length ? paths : (single ? [single] : [])
+  const list = arr.length ? arr : [regsvc.envPaths().user, regsvc.envPaths().machine]
   const nodes = []
   const failed = []
   for (const raw of list) {
@@ -1984,24 +2003,30 @@ async function executeScheduleTask(task) {
   const type = assertScheduleType(task.type)
   if (type === 'snapshot') {
     const ops = require('../lib/ops')
+    const p = task.params || {}
     const snap = await ops.createSnapshotV2({
       name: `定时快照 ${tsText(Date.now())}`,
       note: '由定时任务自动创建',
-      auto: true
+      auto: true,
+      // 任务参数里勾选「标记保护」时，快照不会被后续自动清理删掉
+      protected: p.protected === true || p.protect === true
     })
     return { kind: type, id: snap && snap.id, file: snap && snap.file }
   }
   if (type === 'registry-backup') {
-    const file = await backupRegistryBranches(task.params && task.params.paths)
+    const file = await backupRegistryBranches(task.params && task.params.paths, task.params || {})
     return { kind: type, ...file }
   }
   if (type === 'audit-export') {
-    const res = await exportAuditLogs()
+    const res = await exportAuditLogs(task.params || {})
     return { kind: type, ...res }
   }
   if (type === 'health-scan') {
+    const p = task.params || {}
     const result = await healthScan()
-    const target = path.join(healthDir(), `HealthReport-${fileStamp()}.md`)
+    const wanted = normStr(p.dir || p.reportDir || '').trim()
+    const outDir = wanted ? store.ensureDir(wanted) : healthDir()
+    const target = path.join(outDir, `HealthReport-${fileStamp()}.md`)
     fs.writeFileSync(target, buildHealthReport(result, 'markdown'), 'utf8')
     return { kind: type, score: result.score, file: target }
   }
@@ -2034,8 +2059,37 @@ async function runTaskNow(task) {
     }
     audit('schedule', 'scheduleRun', { id: task.id, name: task.name, type: task.type, ok: false, message: err.message })
     store.writeLog('error', `定时任务「${task.name}」执行失败`, err.message)
+    notifyScheduleFailure(task, err.message)
     throw err
   }
+}
+
+/**
+ * 任务失败桌面通知。
+ * 全局开关（设置页 scheduleNotifyOnFail，默认开启）与任务级 notifyOnFail 都要为真才弹。
+ * 通知失败绝不影响主流程。
+ */
+function notifyScheduleFailure(task, message) {
+  try {
+    let globalOn = true
+    try { globalOn = store.readConfig().scheduleNotifyOnFail !== false } catch { globalOn = true }
+    if (!globalOn) return
+    if (task && task.notifyOnFail === false) return
+    const { Notification } = require('electron')
+    if (!Notification || !Notification.isSupported()) return
+    const n = new Notification({
+      title: '定时任务执行失败',
+      body: `${(task && task.name) || '未命名任务'}：${String(message || '').slice(0, 120)}`,
+      silent: false
+    })
+    n.on('click', () => {
+      try {
+        const win = require('electron').BrowserWindow.getAllWindows()[0]
+        if (win) { win.show(); win.focus() }
+      } catch { /* ignore */ }
+    })
+    n.show()
+  } catch { /* ignore */ }
 }
 
 function publicTask(task) {

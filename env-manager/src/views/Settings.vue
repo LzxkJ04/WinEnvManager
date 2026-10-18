@@ -1219,6 +1219,23 @@ function openPackExport() {
   packExportOpen.value = true
 }
 
+/**
+ * 读取全局搜索历史（保存在 localStorage）。
+ * 主进程读不到浏览器存储，配置打包时由前端带上；读取失败按空数组处理。
+ */
+function readSearchHistory() {
+  try {
+    const raw = localStorage.getItem('wem-search-history')
+    if (!raw) return []
+    const data = JSON.parse(raw)
+    if (Array.isArray(data)) return data
+    if (data && Array.isArray(data.items)) return data.items
+    return []
+  } catch {
+    return []
+  }
+}
+
 async function doPackExport() {
   if (!packModules.value.length) {
     message.warning('请至少选择一个模块')
@@ -1234,7 +1251,9 @@ async function doPackExport() {
       modules: packModules.value.slice(),
       note: packForm.note,
       tags,
-      password: packForm.password
+      password: packForm.password,
+      // 搜索历史存在渲染进程 localStorage，主进程读不到，只能由前端带上
+      searchHistory: readSearchHistory()
     })
     if (!res.ok) {
       message.error(res.message)

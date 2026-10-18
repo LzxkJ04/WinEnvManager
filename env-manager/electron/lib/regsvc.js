@@ -56,7 +56,11 @@ const VALUE_TYPES = [
 function parsePath(raw) {
   const text = String(raw == null ? '' : raw).trim()
   if (!text) return { ok: false, message: '注册表路径不能为空' }
-  const t = text.replace(/^Registry::/i, '').replace(/\//g, '\\').replace(/\\+$/, '')
+  // 兼容两种提供程序写法：Registry::HKEY_... 与 Microsoft.PowerShell.Core\Registry::HKEY_...
+  // 统一截到 "Registry::" 之后，避免把提供程序名当成根项。
+  let t = text.replace(/\//g, '\\').replace(/\\+$/, '')
+  const regIdx = t.indexOf('Registry::')
+  if (regIdx >= 0) t = t.slice(regIdx + 'Registry::'.length)
   const up = t.toUpperCase()
   let root = ''
   let rest = ''
@@ -204,8 +208,10 @@ function valueToPs(type, value) {
     const hex = String(value == null ? '' : value).replace(/[\s,]/g, '')
     if (hex && !/^[0-9a-fA-F]+$/.test(hex)) throw new Error('REG_BINARY 必须是十六进制字符串')
     if (hex.length % 2 !== 0) throw new Error('REG_BINARY 十六进制长度必须为偶数')
-    const bytes = hex.match(/.{1,2}/g) || []
-    return { psType: 'Binary', literal: `[byte[]]@(${bytes.map((b) => parseInt(b, 16)).join(',') || '0'})` }
+    // 空二进制也必须至少一个字节，New-ItemProperty 不接受空数组
+    const bytes = (hex.match(/.{1,2}/g) || ['00']).map((b) => parseInt(b, 16))
+    // 关键：用 Set-ItemProperty 写 byte[]，New-ItemProperty 的 -Value 会把数组拆成位置参数而报错
+    return { psType: 'Binary', literal: `([byte[]]@(${bytes.join(',')}))`, useSetProperty: true }
   }
   if (t === 'REG_EXPAND_SZ') {
     return { psType: 'ExpandString', literal: `'${psQuote(value)}'` }
@@ -279,7 +285,15 @@ async function listValues(fullPath, options = {}) {
       $kind = 'REG_SZ'
       try { $kind = $item.GetValueKind($n).ToString() } catch { $kind = 'REG_SZ' }
       $val = $null
-      try { $val = $item.GetValue($n) } catch { $val = '' }
+      try {
+        # REG_EXPAND_SZ 必须用 DoNotExpandEnvironmentNames 取原始值，
+        # 否则 PowerShell 会把 %TEMP% 直接展开成绝对路径，原始表达式就丢了
+        if ($kind -eq 'ExpandString') {
+          $val = $item.GetValue($n, $null, [Microsoft.Win32.RegistryValueOptions]::DoNotExpandEnvironmentNames)
+        } else {
+          $val = $item.GetValue($n)
+        }
+      } catch { $val = '' }
       $b64 = ''
       if ($kind -eq 'Binary') {
         try {
@@ -343,7 +357,13 @@ async function readTree(fullPath, options = {}) {
         $kind = 'REG_SZ'
         try { $kind = $item.GetValueKind($n).ToString() } catch { $kind = 'REG_SZ' }
         $val = $null
-        try { $val = $item.GetValue($n) } catch { $val = '' }
+        try {
+          if ($kind -eq 'ExpandString') {
+            $val = $item.GetValue($n, $null, [Microsoft.Win32.RegistryValueOptions]::DoNotExpandEnvironmentNames)
+          } else {
+            $val = $item.GetValue($n)
+          }
+        } catch { $val = '' }
         $b64 = ''
         if ($kind -eq 'Binary') {
           try { if ($val -is [byte[]]) { $b64 = [Convert]::ToBase64String($val) } } catch { $b64 = '' }
@@ -354,7 +374,13 @@ async function readTree(fullPath, options = {}) {
           value = if ($kind -eq 'Binary') { $b64 } elseif ($kind -eq 'MultiString') { ($val -join "\\n") } else { [string]$val }
         }
       }
-      $result += [pscustomobject]@{ psPath = $cur.ps; keyPath = ($cur.ps -replace '^Registry::HKEY_[A-Z_]+', ''); values = $vals }
+      # $cur.ps 来自 $child.PSPath，可能是「Microsoft.PowerShell.Core\Registry::HKEY_...」，
+      # 必须先把提供程序前缀整段剥掉，否则根项识别失败、恢复时无法回写
+      $rawPath = [string]$cur.ps
+      $regIdx = $rawPath.IndexOf('Registry::')
+      if ($regIdx -ge 0) { $rawPath = $rawPath.Substring($regIdx + 10) }
+      $rawPath = $rawPath -replace '^(HKEY_CLASSES_ROOT|HKEY_CURRENT_USER|HKEY_LOCAL_MACHINE|HKEY_USERS|HKEY_CURRENT_CONFIG)', '$1'
+      $result += [pscustomobject]@{ psPath = $cur.ps; keyPath = $rawPath; values = $vals }
       $count++
       if ($cur.depth -lt $maxDepth) {
         try {
@@ -388,8 +414,11 @@ async function readTree(fullPath, options = {}) {
 
 /** 把 PowerShell 侧的 keyPath（\Software\...）补回根项短名 */
 function normalizeKeyPath(raw) {
-  const t = String(raw || '')
+  let t = String(raw || '')
   if (!t) return ''
+  // 兜底：部分来源仍带提供程序前缀，先整段剥掉
+  const regIdx = t.indexOf('Registry::')
+  if (regIdx >= 0) t = t.slice(regIdx + 'Registry::'.length)
   const m = t.match(/^HKEY_([A-Z_]+)(.*)$/i)
   if (m) {
     const map = { CURRENT_USER: 'HKCU', LOCAL_MACHINE: 'HKLM', CLASSES_ROOT: 'HKCR', USERS: 'HKU', CURRENT_CONFIG: 'HKCC' }
@@ -441,8 +470,18 @@ async function createKey(parentPath, keyName, values = []) {
   for (const v of values || []) {
     const nm = validateKeyName(v.name)
     if (!nm.ok) throw new Error(`键值名称不合法：${nm.message}`)
-    const { psType, literal } = valueToPs(v.type, v.value)
-    setters.push(`New-ItemProperty -Path $key -Name '${psQuote(nm.value)}' -PropertyType ${psType} -Value ${literal} -Force | Out-Null`)
+    const { psType, literal, useSetProperty } = valueToPs(v.type, v.value)
+    if (useSetProperty) {
+      // 二进制同样要两步写，详见 setValue 的说明
+      setters.push(
+        `New-ItemProperty -Path $key -Name '${psQuote(nm.value)}' -PropertyType Binary -Value ([byte[]]@(0)) -Force | Out-Null`
+      )
+      setters.push(
+        `Set-ItemProperty -Path $key -Name '${psQuote(nm.value)}' -Value ${literal} -Force`
+      )
+    } else {
+      setters.push(`New-ItemProperty -Path $key -Name '${psQuote(nm.value)}' -PropertyType ${psType} -Value ${literal} -Force | Out-Null`)
+    }
   }
   const script = wrapJson(`
     $key = '${psQuote(w.psPath)}'
@@ -482,12 +521,18 @@ async function setValue(fullPath, name, type, value) {
     before = cur.find((x) => x.name.toLowerCase() === (nm || '').toLowerCase()) || null
   } catch { /* 读不到旧值不阻断 */ }
 
-  const { psType, literal } = valueToPs(type, value)
+  const { psType, literal, useSetProperty } = valueToPs(type, value)
   const valueName = nm === '' ? '(default)' : `'${psQuote(nm)}'`
+  // byte[] 必须分两步：先用 New-ItemProperty 建出 Binary 值，再用 Set-ItemProperty 写数组。
+  // 直接在 New-ItemProperty 的 -Value 传数组会被 PowerShell 拆成位置参数而报错。
+  const writeLine = useSetProperty
+    ? `New-ItemProperty -Path $key -Name ${valueName} -PropertyType Binary -Value ([byte[]]@(0)) -Force | Out-Null
+       Set-ItemProperty -Path $key -Name ${valueName} -Value ${literal} -Force`
+    : `New-ItemProperty -Path $key -Name ${valueName} -PropertyType ${psType} -Value ${literal} -Force | Out-Null`
   const script = wrapJson(`
     $key = '${psQuote(p.psPath)}'
     if (-not (Test-Path -LiteralPath $key)) { New-Item -Path $key -Force | Out-Null }
-    New-ItemProperty -Path $key -Name ${valueName} -PropertyType ${psType} -Value ${literal} -Force | Out-Null
+    ${writeLine}
     @{ ok = $true } | ConvertTo-Json -Depth 4 -Compress
   `)
   const res = await runPowerShellJson(script, { timeout: 30000 })

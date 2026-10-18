@@ -139,13 +139,33 @@ const detailColumns = [
   { title: '结果', key: 'ok', width: 80 }
 ]
 
+/**
+ * 统一把审计记录的 items 规整成数组。
+ * 环境变量类记录是 [{name,scope,before,after,ok}]；
+ * 注册表 / 配置包 / 诊断类记录写的是对象（如 { path, name, keyCount }），
+ * 直接 map 会抛「xxx is not a function」。
+ */
+function normItems(raw) {
+  if (Array.isArray(raw)) return raw.filter((i) => i && typeof i === 'object')
+  if (raw && typeof raw === 'object') {
+    // 对象形态：转成单条明细，键值对拍平成 name/value 便于表格展示
+    if (raw.name || raw.path || raw.file) return [raw]
+    const pairs = Object.entries(raw)
+      .filter(([, v]) => v !== undefined && v !== null && typeof v !== 'object')
+      .map(([k, v]) => ({ name: k, before: '', after: String(v) }))
+    return pairs
+  }
+  if (typeof raw === 'string' && raw.trim()) return [{ name: raw }]
+  return []
+}
+
 const filtered = computed(() =>
   items.value.filter((r) => {
     if (fOrigin.value !== 'all' && (r.origin || 'GUI') !== fOrigin.value) return false
     if (fAction.value !== 'all' && r.action !== fAction.value) return false
     if (fText.value.trim()) {
       const k = fText.value.trim().toLowerCase()
-      const names = (r.items || []).map((i) => String(i.name || '')).join(' ')
+      const names = normItems(r.items).map((i) => String(i.name || '')).join(' ')
       if (!names.toLowerCase().includes(k)) return false
     }
     return true
@@ -154,7 +174,7 @@ const filtered = computed(() =>
 
 const auditRows = computed(() =>
   filtered.value.map((row, index) => {
-    const names = (row.items || []).map((item) => item.name).filter(Boolean)
+    const names = normItems(row.items).map((item) => item.name).filter(Boolean)
     return {
       ...row,
       __key: `${row.at || 'audit'}-${index}`,
@@ -165,7 +185,7 @@ const auditRows = computed(() =>
 )
 
 function openDetail(row) {
-  detailItems.value = row?.items || []
+  detailItems.value = normItems(row && row.items)
   detailOpen.value = true
 }
 
@@ -187,7 +207,13 @@ async function openDir() {
 function exportCsv() {
   const rows = [['时间', '来源', '动作', '变量名', '归属', '原值', '新值', '结果']]
   for (const r of filtered.value) {
-    for (const i of r.items || []) {
+    const list = normItems(r.items)
+    if (!list.length) {
+      // 注册表 / 配置包类记录没有变量明细，仍导出该行，避免丢失审计记录
+      rows.push([r.atText, r.origin || 'GUI', r.action, '', '', '', r.message || '', r.ok === false ? '失败' : '成功'])
+      continue
+    }
+    for (const i of list) {
       rows.push([r.atText, r.origin || 'GUI', r.action, i.name, i.scope, i.before, i.after, i.ok ? '成功' : '失败'])
     }
   }

@@ -28,9 +28,16 @@
 </template>
 
 <script setup>
-import { computed, reactive, ref, watch } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { message } from 'ant-design-vue'
 import api from '@/api'
+
+/** 关闭异步加载时的预取深度上限，防止大分支无限递归 */
+const MAX_PREFETCH_DEPTH = 3
+
+/** 设置页「注册表树异步加载」开关，默认开启 */
+const lazyEnabled = ref(true)
+let prefetching = false
 
 const props = defineProps({
   roots: { type: Array, default: () => [] },
@@ -132,6 +139,54 @@ async function ensureLoaded(path) {
   })
   node.isLeaf = list.length === 0
   emit('loaded', path)
+
+  // 设置页关闭了「注册表树异步加载」时，继续预取下一层。
+  // 仍然逐层、限深度地预取，不做无限制递归，避免大分支把内存打满。
+  if (lazyEnabled === false && !prefetching && list.length) {
+    prefetching = true
+    try {
+      await prefetchChildren(node.children, 1)
+    } finally {
+      prefetching = false
+    }
+  }
+}
+
+/** 同步设置页的「注册表树异步加载」开关 */
+onMounted(async () => {
+  try {
+    const cfg = await api.config.get()
+    if (cfg.ok && cfg.data) lazyEnabled.value = cfg.data.regTreeLazy !== false
+  } catch { lazyEnabled.value = true }
+})
+
+/**
+ * 预取子项（仅当关闭异步加载时启用）。
+ * @param {string[]} paths
+ * @param {number} depth 当前深度，超过上限即停止
+ */
+async function prefetchChildren(paths, depth) {
+  if (depth > MAX_PREFETCH_DEPTH) return
+  for (const p of paths) {
+    const n = nodes[p]
+    if (!n || n.loaded || n.loading) continue
+    n.loading = true
+    try {
+      const res = await api.reg.subKeys(p)
+      n.loading = false
+      n.loaded = true
+      if (!res.ok) continue
+      const list = Array.isArray(res.data) ? res.data : []
+      n.children = list.map((item) => {
+        ensureNode(item.fullPath, item.name, item.hasChildren, item.isEnv)
+        return item.fullPath
+      })
+      n.isLeaf = list.length === 0
+      if (n.children.length) await prefetchChildren(n.children, depth + 1)
+    } catch {
+      n.loading = false
+    }
+  }
 }
 
 /** a-tree 槽位在不同版本里给的是 node 本身或 node.dataRef，这里统一取值 */

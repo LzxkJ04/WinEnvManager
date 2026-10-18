@@ -270,6 +270,19 @@ async function behaviorChecks() {
   const skipped = ops.readSnapshotAny(gz.id, { skipHash: true })
   check('只有明确跳过校验才继续读', skipped.user.A === 'tampered' && skipped.checksum.skipped === true)
 
+  // 注意：pruneSnapshots 作用的是整个快照目录，若不先清空，会连用户真实快照一起删。
+  // 这里先把已有快照移到临时目录暂存，测完再还原，保证用户数据零损失。
+  const snapDir = store.snapshotDir()
+  const stashDir = path.join(store.appDataDir(), '_adapt_snap_stash')
+  let stashed = []
+  if (fs.existsSync(snapDir)) {
+    fs.mkdirSync(stashDir, { recursive: true })
+    stashed = fs.readdirSync(snapDir).filter((f) => !f.startsWith('_'))
+    for (const f of stashed) {
+      try { fs.renameSync(path.join(snapDir, f), path.join(stashDir, f)) } catch { /* ignore */ }
+    }
+  }
+
   const oldest = await ops.createSnapshot({ name: 'adapt-old', auto: true }, { user: { N: '1' }, machine: {} })
   ops.setSnapshotProtected(oldest.id, true)
   const middle = await ops.createSnapshot({ name: 'adapt-mid', auto: true }, { user: { N: '2' }, machine: {} })
@@ -279,6 +292,19 @@ async function behaviorChecks() {
   check('清理保留受保护快照', pruned >= 1 && leftIds.has(oldest.id) && leftIds.has(newest.id) && !leftIds.has(middle.id), `removed=${pruned}`)
   for (const id of ops.listSnapshots().map((s) => s.id)) ops.deleteSnapshot(id)
   check('测试快照已删除', ops.listSnapshots().length === 0)
+
+  // 还原用户原有快照
+  if (stashed.length) {
+    for (const f of fs.readdirSync(stashDir)) {
+      try { fs.renameSync(path.join(stashDir, f), path.join(snapDir, f)) } catch { /* ignore */ }
+    }
+    try { fs.rmdirSync(stashDir) } catch { /* ignore */ }
+  }
+  // 只断言「原有文件都回来了」，不比对总数：
+  // 暂存区可能含上一轮测试残留的非快照文件，总数不等不代表用户数据丢失。
+  const restored = stashed.filter((f) => fs.existsSync(path.join(snapDir, f)))
+  check('用户原有快照已还原', restored.length === stashed.length,
+    `stashed=${stashed.length} restored=${restored.length}`)
 
   store.writeConfig({ cacheMaxMB: 0 })
   check('缓存上限为 0 时不清理', store.pruneInstallerCache().skipped === true)
