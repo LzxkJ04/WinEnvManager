@@ -59,3 +59,4 @@ tools/fix-*.cjs
 tools/append-memory.py
 env-manager/tools/test-adapt-result.json
 installer-web/_err.txt
+.tmp-gh/
